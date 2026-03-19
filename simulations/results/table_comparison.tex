@@ -1,0 +1,39 @@
+\begin{tabular}{llrrrrr}
+\toprule
+DGP & Method & $n$ & Recovery & TPR & Avg.\ FP & Time (s) \\
+\midrule
+Poisson GLM (p=2) & causalreg (all) & 500 & 96\% & 0.98 & 0.02 & 0.01 \\
+Poisson GLM (p=2) & causalreg (step) & 500 & 98\% & 1.00 & 0.02 & 0.01 \\
+Poisson GLM (p=2) & ACR & 500 & 0\% & 1.00 & 1.00 & 0.19 \\
+Poisson GLM (p=2) & causalreg (all) & 1000 & 100\% & 1.00 & 0.00 & 0.01 \\
+Poisson GLM (p=2) & causalreg (step) & 1000 & 100\% & 1.00 & 0.00 & 0.02 \\
+Poisson GLM (p=2) & ACR & 1000 & 1\% & 1.00 & 0.99 & 0.23 \\
+Poisson GLM (p=2) & causalreg (all) & 2000 & 100\% & 1.00 & 0.00 & 0.02 \\
+Poisson GLM (p=2) & causalreg (step) & 2000 & 100\% & 1.00 & 0.00 & 0.04 \\
+Poisson GLM (p=2) & ACR & 2000 & 0\% & 1.00 & 1.00 & 0.34 \\
+\midrule
+Binomial GLM (p=2) & causalreg (all) & 500 & 1\% & 0.08 & 0.99 & 0.66 \\
+Binomial GLM (p=2) & causalreg (step) & 500 & 91\% & 1.00 & 0.09 & 0.65 \\
+Binomial GLM (p=2) & ACR & 500 & 0\% & 0.99 & 1.00 & 0.17 \\
+Binomial GLM (p=2) & causalreg (all) & 1000 & 91\% & 0.99 & 0.09 & 1.25 \\
+Binomial GLM (p=2) & causalreg (step) & 1000 & 91\% & 0.98 & 0.08 & 1.25 \\
+Binomial GLM (p=2) & ACR & 1000 & 0\% & 0.99 & 1.00 & 0.30 \\
+Binomial GLM (p=2) & causalreg (all) & 2000 & 2\% & 1.00 & 0.98 & 2.18 \\
+Binomial GLM (p=2) & causalreg (step) & 2000 & 3\% & 0.99 & 0.96 & 2.14 \\
+Binomial GLM (p=2) & ACR & 2000 & 0\% & 1.00 & 1.00 & 0.50 \\
+\midrule
+Binomial GLM (p=5) & causalreg (all) & 1000 & 0\% & 0.99 & 1.99 & 12.21 \\
+Binomial GLM (p=5) & causalreg (step) & 1000 & 1\% & 1.00 & 1.97 & 5.65 \\
+Binomial GLM (p=5) & ACR & 1000 & 0\% & 0.99 & 2.00 & 0.35 \\
+Binomial GLM (p=5) & causalreg (all) & 2000 & 0\% & 0.99 & 2.92 & 20.28 \\
+Binomial GLM (p=5) & causalreg (step) & 2000 & 1\% & 0.99 & 1.97 & 9.79 \\
+Binomial GLM (p=5) & ACR & 2000 & 0\% & 0.99 & 2.00 & 0.60 \\
+Binomial GLM (p=5) & causalreg (all) & 3000 & 0\% & 0.98 & 2.04 & 31.42 \\
+Binomial GLM (p=5) & causalreg (step) & 3000 & 2\% & 0.99 & 1.94 & 14.52 \\
+Binomial GLM (p=5) & ACR & 3000 & 0\% & 1.00 & 2.00 & 0.89 \\
+\midrule
+Gaussian linear (p=5) & ACR & 500 & 0\% & 1.00 & 2.00 & 0.31 \\
+Gaussian linear (p=5) & ACR & 1000 & 0\% & 1.00 & 2.00 & 0.39 \\
+Gaussian linear (p=5) & ACR & 2000 & 0\% & 1.00 & 2.00 & 0.58 \\
+\bottomrule
+\end{tabular}

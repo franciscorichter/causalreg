@@ -338,10 +338,92 @@ Figure~\ref{fig:p5detail} provides a detailed view of the five-covariate binomia
 \end{figure}
 
 % ============================================================================
+\section{Comparison with Adversarial Causal Regularization}
+% ============================================================================
+
+We now compare the Pearson risk invariance method (\texttt{causalreg}) with Adversarial Causal Regularization (ACR) \citep{richter2026}, a fundamentally different approach to causal discovery.
+
+\subsection{ACR Method Overview}
+
+ACR discovers causal relationships by exploiting the \emph{invariance principle}: the conditional distribution $P(Y \mid \mathbf{X}_{\pa(Y)})$ is invariant across environments, while spurious correlations change. Unlike \texttt{causalreg}, ACR does not require knowledge of the response family (Poisson, binomial); instead, it learns \emph{latent environment memberships} from data.
+
+\paragraph{Phase~1: Adversarial weight learning.} ACR introduces soft weights $w_i \in [0,1]$ for each observation, partitioning the data into two pseudo-environments. The adversary maximizes the weighted risk difference (WRD):
+\begin{equation}
+\mathcal{L}(\boldsymbol{\beta}, \mathbf{w}) = \hat{R}_1(\boldsymbol{\beta}; \mathbf{w}) + \hat{R}_2(\boldsymbol{\beta}; \mathbf{w}) + \Gamma \cdot \big|\hat{R}_1(\boldsymbol{\beta}; \mathbf{w}) - \hat{R}_2(\boldsymbol{\beta}; \mathbf{w})\big|,
+\end{equation}
+where $\hat{R}_k$ are weighted mean squared errors for each pseudo-environment, and $\Gamma$ controls the adversarial strength.
+
+The learner simultaneously updates $\boldsymbol{\beta}$ via a closed-form weighted ridge regression (Eq.~14 in \citealt{richter2026}):
+\begin{equation}
+\boldsymbol{\beta} = (\mathbf{G}_+ + \Gamma s \mathbf{G}_\Delta + \lambda \mathbf{I})^{-1}(\mathbf{Z}_+ + \Gamma s \mathbf{Z}_\Delta),
+\end{equation}
+where $s = \text{sgn}(\hat{R}_1 - \hat{R}_2)$, $\mathbf{G}_+, \mathbf{G}_\Delta$ are sums and differences of weighted Gram matrices, and $\lambda$ is a ridge penalty.
+
+\paragraph{Phase~2: Cross-validated $\Gamma$ selection.} The regularization strength $\Gamma_{\text{fit}}$ is selected via $K$-fold cross-validation using the WRD criterion. The final coefficients are re-estimated with the selected $\Gamma_{\text{fit}}$.
+
+\paragraph{Variable selection from ACR.} ACR produces a coefficient vector $\hat{\boldsymbol{\beta}}$. We select variable $j$ as a causal parent if $|\hat{\beta}_j| / \max_k |\hat{\beta}_k| > 0.15$ (relative magnitude threshold).
+
+\subsection{Key Differences}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+& \textbf{causalreg} & \textbf{ACR} \\
+\midrule
+Input data & Single environment & Multi-env.\ (or discovers latent envs.) \\
+Response type & Poisson, Binomial (GLM/GAM) & Continuous (MSE loss) \\
+Output & Selected parent set & Coefficient vector \\
+Variable selection & Via Pearson risk test + BIC & Via coefficient thresholding \\
+Environment info & Not needed & Discovered from data \\
+Nonlinear effects & Via GAM smooth terms & Not supported (linear) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Comparison Setup}
+
+To compare the methods, we create multi-environment versions of DGPs~1--3 by introducing distribution shifts in downstream (non-causal) variables between environments. The data from both environments is pooled:
+
+\begin{itemize}
+    \item \textbf{causalreg} receives the pooled data and applies its Pearson risk invariance test, ignoring the environment structure.
+    \item \textbf{ACR} receives the pooled data (without environment labels) and attempts to discover the latent environments via adversarial weight learning, then uses them for invariance-based variable selection.
+\end{itemize}
+
+Note that ACR uses MSE loss even on Poisson/Binomial responses, which is suboptimal but allows direct comparison. We also test ACR on a Gaussian linear DGP (its native setting) as a reference.
+
+\subsection{Comparison Results}
+
+Table~\ref{tab:comparison} and Figure~\ref{fig:comparison} show the comparison results.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of causalreg and ACR: exact recovery rate, true positive rate, average false positives, and computation time (per run) across 100 replicates.}
+\label{tab:comparison}
+\small
+\input{results/table_comparison.tex}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_comparison_recovery.pdf}
+\caption{Exact recovery rate comparison between \texttt{causalreg} (exhaustive and stepwise search) and ACR across three DGPs with varying sample size.}
+\label{fig:comparison}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_comparison_time.pdf}
+\caption{Average computation time per run for \texttt{causalreg} and ACR.}
+\label{fig:comparison_time}
+\end{figure}
+
+% ============================================================================
 \section{Discussion}
 % ============================================================================
 
-The simulation study demonstrates that the Pearson risk invariance method successfully recovers the true causal parents across a range of settings:
+\subsection{Pearson Risk Invariance (causalreg)}
+
+The Pearson risk invariance method successfully recovers the true causal parents across a range of settings:
 
 \begin{enumerate}
     \item \textbf{Sample size}: Recovery rates improve with increasing $n$ across all DGPs. For the simple two-covariate Poisson case (DGP~1), near-perfect recovery is achieved at $n = 500$. More complex scenarios (DGP~3 with $p=5$, DGP~5 with $p=7$) require larger samples.
@@ -353,6 +435,20 @@ The simulation study demonstrates that the Pearson risk invariance method succes
     \item \textbf{Nonlinear models}: The GAM-based approach (DGPs~4--5) successfully handles nonlinear causal relationships by using smooth function terms, with recovery rates comparable to the linear case for similar problem complexity.
 
     \item \textbf{Robustness}: The method correctly distinguishes causal parents from ancestors ($X_1$ in DGP~3), descendants ($X_4$, $X_5$ in DGP~3), and spurious correlates, even in the presence of strong correlations.
+\end{enumerate}
+
+\subsection{Comparison with ACR}
+
+The comparison reveals that the two methods have complementary strengths:
+
+\begin{enumerate}
+    \item \textbf{Model specification}: \texttt{causalreg} leverages the known response distribution (Poisson, binomial) through the Pearson risk, giving it a strong advantage on GLM data. ACR uses MSE loss regardless of the response type, which is suboptimal for discrete responses.
+
+    \item \textbf{Environment discovery}: ACR's ability to discover latent environments can be valuable when distribution shifts are present but unlabeled. However, \texttt{causalreg} does not need environment information at all---it uses a model-based criterion that works with single-environment data.
+
+    \item \textbf{Scalability}: ACR has fixed $O(n \cdot p^2 \cdot T)$ complexity where $T$ is the number of optimization steps, while \texttt{causalreg}'s exhaustive search has $O(2^p)$ complexity. For large $p$, ACR scales better; for small $p$ with discrete responses, \texttt{causalreg} is more appropriate.
+
+    \item \textbf{Complementary use}: In practice, the methods address different settings. \texttt{causalreg} is the natural choice for count data (Poisson) or binary outcomes (binomial) with known distributional structure. ACR is better suited for continuous responses, high-dimensional settings, or when distribution shifts across environments provide additional causal signal.
 \end{enumerate}
 
 % ============================================================================
@@ -382,6 +478,11 @@ V.~Vinciotti and E.~C. Wit.
 A.~Polinelli, V.~Vinciotti, and E.~C. Wit.
 \newblock Causal generalized linear models via {P}earson risk invariance.
 \newblock \emph{Journal of Causal Inference}, 2026.
+
+\bibitem[Richter and Wit(2026)]{richter2026}
+F.~Richter and E.~C. Wit.
+\newblock Adversarial causal regularization without predefined environments.
+\newblock Working paper, 2026.
 \end{thebibliography}
 
 \end{document}
