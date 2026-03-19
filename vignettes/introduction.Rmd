@@ -1,0 +1,183 @@
+---
+title: "Introduction to causalreg"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to causalreg}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Overview
+
+The `causalreg` package implements causal discovery via **Pearson risk
+invariance** for generalized linear models (GLMs) and generalized additive
+models (GAMs). Given a response and a set of candidate covariates, it
+identifies which covariates are causal parents of the response within a
+structural causal model.
+
+The key idea: if a GLM or GAM is correctly specified with respect to the
+true causal parents, the **Pearson risk** (average squared Pearson residual)
+converges to 1. The package tests this property across subsets of covariates to
+find the causal model.
+
+## Causal Poisson regression
+
+Consider a simple setting where `X1` causes `Y` (Poisson), and `X2` is a
+downstream effect of `Y`:
+
+```{r poisson-glm}
+library(causalreg)
+
+n <- 1000
+set.seed(123)
+X1 <- rnorm(n)
+Y  <- rpois(n, exp(X1))
+X2 <- log(Y + 1) + rnorm(n, 0, 0.3)
+data <- data.frame(X1, X2, Y)
+```
+
+### Exhaustive search with chi-square test
+
+For Poisson models, the chi-square test is fast and appropriate:
+
+```{r poisson-all}
+result <- cglm(Y ~ X1 + X2, "poisson", data, pval = "chi-square", search = "all")
+result$model.opt
+```
+
+The method correctly identifies `Y ~ X1` as the causal model.
+
+We can inspect the full results:
+
+```{r poisson-all-details}
+# All models considered
+unlist(result$models)
+
+# Their p-values (higher = more consistent with Pearson risk = 1)
+result$pv
+
+# Their BIC values
+result$bic
+```
+
+Only the model `Y ~ X1` has a p-value above the significance threshold
+(alpha = 0.05 by default), and it is selected.
+
+### Stepwise search
+
+For larger numbers of covariates, exhaustive search over all 2^p - 1
+subsets becomes impractical. The stepwise search provides a faster
+alternative:
+
+```{r poisson-step}
+result_step <- cglm(Y ~ X1 + X2, "poisson", data, pval = "chi-square", search = "stepwise")
+result_step$model.opt
+
+# Models visited during the search
+unlist(result_step$models)
+```
+
+The stepwise search starts with an intercept-only model, then greedily adds
+the variable that maximizes the Pearson risk p-value. After the forward
+phase, it performs backward elimination based on BIC.
+
+## Causal logistic regression
+
+For binomial models, the chi-square approximation does not hold, so we use
+the bootstrap test:
+
+```{r binomial-glm}
+n <- 2000
+set.seed(123)
+X1 <- rnorm(n)
+Y  <- rbinom(n, 1, exp(X1) / (1 + exp(X1)))
+flip <- rbinom(n, 1, 0.1)
+X2 <- (1 - flip) * Y + rnorm(n, 0, 0.3)
+data <- data.frame(X1, X2, Y)
+
+set.seed(1)
+result <- cglm(Y ~ X1 + X2, "binomial", data, pval = "bootstrap", search = "all")
+result$model.opt
+```
+
+The bootstrap test correctly identifies the causal model despite the
+binomial response.
+
+## Causal GAMs for nonlinear relationships
+
+When the relationship between covariates and response is nonlinear, use
+`cgam()` with smooth terms:
+
+```{r poisson-gam}
+n <- 1000
+set.seed(123)
+X1 <- rnorm(n)
+Y  <- rpois(n, exp(sin(X1)))
+X2 <- log(Y + 1) + rnorm(n, 0, 0.5)
+data <- data.frame(X1, X2, Y)
+
+result <- cgam(Y ~ s(X1) + s(X2), "poisson", data, pval = "chi-square", search = "all")
+result$model.opt
+```
+
+The `cgam()` function uses `mgcv::gam()` internally and handles smooth
+terms (`s()`) in the formula. The Pearson risk invariance principle applies
+equally to GAMs.
+
+## Larger example: 5 covariates
+
+In a more realistic setting with 5 candidate covariates and a binomial
+response:
+
+```{r five-cov, eval = FALSE}
+set.seed(12)
+n <- 3000
+X1 <- rnorm(n)
+X2 <- rnorm(n, X1, 0.5)
+X3 <- rnorm(n, 0, 1)
+X4 <- rnorm(n, X2, 0.5)
+Y  <- rbinom(n, 1, exp(0.8 * X2 - 0.9 * X3) / (1 + exp(0.8 * X2 - 0.9 * X3)))
+flip <- rbinom(n, 1, 0.1)
+X5 <- (1 - flip) * Y + flip * (1 - Y) + rnorm(n, 0, 0.3)
+dat <- data.frame(X1, X2, X3, X4, X5, Y)
+
+# Exhaustive search (evaluates all 2^5 - 1 = 31 subsets)
+set.seed(1)
+mod_all <- cglm(Y ~ X1 + X2 + X3 + X4 + X5, "binomial", dat,
+                pval = "bootstrap", search = "all")
+mod_all$model.opt
+#> [1] "Y ~ X2 + X3"
+
+# Stepwise search (much faster)
+set.seed(1)
+mod_step <- cglm(Y ~ X1 + X2 + X3 + X4 + X5, "binomial", dat,
+                 pval = "bootstrap", search = "stepwise")
+mod_step$model.opt
+#> [1] "Y ~ X2 + X3"
+```
+
+Both search strategies correctly identify `X2` and `X3` as the causal
+parents of `Y`, despite the presence of correlated (X1, X4) and
+confounded (X5) variables.
+
+## Summary of recommendations
+
+| Scenario | `family` | `pval` | `search` |
+|----------|----------|--------|----------|
+| Count data, few covariates (p < 15) | `"poisson"` | `"chi-square"` | `"all"` |
+| Count data, many covariates | `"poisson"` | `"chi-square"` | `"stepwise"` |
+| Binary data, few covariates | `"binomial"` | `"bootstrap"` | `"all"` |
+| Binary data, many covariates | `"binomial"` | `"bootstrap"` | `"stepwise"` |
+| Nonlinear effects | Use `cgam()` with `s()` terms | Same as above | Same as above |
+
+## Reference
+
+Polinelli, A., V. Vinciotti and E.C. Wit. (2026). "Causal generalized
+linear models via Pearson risk invariance." *Journal of Causal Inference*.

@@ -1,0 +1,24 @@
+# R package build artifacts
+*.Rcheck/
+*.tar.gz
+*.Rproj.user
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# macOS
+.DS_Store
+
+# Byte-compiled
+*.rds
+*.o
+*.so
+*.dll
+
+# IDE
+.vscode/
+.idea/
+
+# Package documentation build
+inst/doc/
