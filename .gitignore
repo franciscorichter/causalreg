@@ -22,3 +22,7 @@
 
 # Package documentation build
 inst/doc/
+simulations/report.aux
+simulations/report.log
+simulations/report.out
+simulations/report.toc

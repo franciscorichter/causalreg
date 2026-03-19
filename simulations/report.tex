@@ -1,0 +1,387 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning}
+\usepackage{natbib}
+\usepackage{xcolor}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\pa}{\mathrm{pa}}
+
+\title{Causal Discovery via Pearson Risk Invariance:\\
+Technical Report and Simulation Study}
+\author{Technical report for the \texttt{causalreg} R package}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report describes the statistical method implemented in the \texttt{causalreg} R package for causal discovery in generalized linear models (GLMs) and generalized additive models (GAMs). The method exploits the fact that the Pearson risk equals~1 if and only if the model is correctly specified with respect to its causal parents. We present the theoretical foundations, describe the search algorithms, and evaluate the method's performance through a simulation study across five data-generating processes with varying sample sizes.
+\end{abstract}
+
+\tableofcontents
+
+% ============================================================================
+\section{Introduction}
+% ============================================================================
+
+Consider a structural causal model (SCM) where a target variable $Y$ is generated from its causal parents $\mathbf{X}_{\pa(Y)}$ through a generalized linear model or generalized additive model. Given a set of candidate covariates $\mathbf{X} = (X_1, \ldots, X_p)$ that includes both causal parents and non-causal variables (ancestors, descendants, confounders), the goal is to identify $\pa(Y) \subseteq \{1, \ldots, p\}$.
+
+The \texttt{causalreg} package \citep{vinciotti2026} implements a method based on \emph{Pearson risk invariance}: the observation that the Pearson risk of a correctly specified GLM/GAM converges to~1, while misspecified models (wrong covariate set) yield a Pearson risk that deviates from~1.
+
+% ============================================================================
+\section{Methodology}
+% ============================================================================
+
+\subsection{Generalized Linear Models}
+
+A GLM specifies the conditional distribution of $Y_i$ given covariates $\mathbf{x}_i$ through:
+\begin{align}
+Y_i &\sim \text{ExponentialFamily}(\mu_i, \phi), \\
+g(\mu_i) &= \mathbf{x}_i^\top \boldsymbol{\beta},
+\end{align}
+where $g(\cdot)$ is the link function, $\mu_i = \E[Y_i \mid \mathbf{x}_i]$, and $\phi$ is the dispersion parameter. Common choices include:
+\begin{itemize}
+    \item \textbf{Poisson regression}: $Y_i \sim \text{Poisson}(\mu_i)$ with $g(\mu) = \log(\mu)$, so $\mu_i = \exp(\mathbf{x}_i^\top \boldsymbol{\beta})$.
+    \item \textbf{Logistic regression}: $Y_i \sim \text{Bernoulli}(\mu_i)$ with $g(\mu) = \log(\mu/(1-\mu))$, so $\mu_i = \text{logistic}(\mathbf{x}_i^\top \boldsymbol{\beta})$.
+\end{itemize}
+
+\subsection{Generalized Additive Models}
+
+A GAM extends the GLM by replacing the linear predictor with a sum of smooth functions:
+\begin{equation}
+g(\mu_i) = \beta_0 + \sum_{j=1}^{p} f_j(x_{ij}),
+\end{equation}
+where each $f_j$ is estimated nonparametrically (e.g., via penalized regression splines). This allows the method to discover causal relationships with nonlinear functional forms.
+
+\subsection{Pearson Residuals and Pearson Risk}
+
+For observation $i$ with fitted value $\hat{\mu}_i$ and variance function $V(\cdot)$, the \emph{Pearson residual} is:
+\begin{equation}
+r_i = \frac{Y_i - \hat{\mu}_i}{\sqrt{V(\hat{\mu}_i)}}.
+\end{equation}
+
+For Poisson models, $V(\mu) = \mu$, so $r_i = (Y_i - \hat{\mu}_i)/\sqrt{\hat{\mu}_i}$. For binomial models, $V(\mu) = \mu(1-\mu)$, so $r_i = (Y_i - \hat{\mu}_i)/\sqrt{\hat{\mu}_i(1-\hat{\mu}_i)}$.
+
+The \emph{Pearson risk} is defined as:
+\begin{equation}
+\label{eq:pearson_risk}
+R_P = \frac{1}{n} \sum_{i=1}^{n} r_i^2 = \frac{1}{n} \sum_{i=1}^{n} \frac{(Y_i - \hat{\mu}_i)^2}{V(\hat{\mu}_i)}.
+\end{equation}
+
+\subsection{The Invariance Principle}
+
+The key theoretical result is:
+
+\begin{quote}
+\textbf{Pearson Risk Invariance.} If the model includes exactly the true causal parents of $Y$ (i.e., the covariates are $\mathbf{X}_{\pa(Y)}$), then $R_P \xrightarrow{p} 1$ as $n \to \infty$.
+
+If the covariate set $S$ does not equal $\pa(Y)$---either by omitting a causal parent or including a non-causal variable that induces bias---then $R_P$ converges to a value different from~1.
+\end{quote}
+
+This provides a testable criterion for evaluating whether a candidate covariate set corresponds to the causal parents: test whether the Pearson risk equals~1.
+
+\subsection{Hypothesis Testing}
+\label{sec:testing}
+
+Given a candidate covariate set $S$, we test:
+\begin{equation}
+H_0: R_P = 1 \quad \text{vs.} \quad H_1: R_P \neq 1.
+\end{equation}
+
+Two testing procedures are implemented:
+
+\subsubsection{Chi-square test}
+
+The Pearson statistic $X^2 = n \cdot R_P = \sum_{i=1}^n r_i^2$ follows approximately a $\chi^2_{n-p}$ distribution under $H_0$, where $p$ is the number of estimated parameters. The two-sided p-value is:
+\begin{equation}
+p_{\chi^2} = 2 \min\!\big(P(\chi^2_{n-p} \leq X^2),\; P(\chi^2_{n-p} \geq X^2)\big).
+\end{equation}
+This approximation is valid for Poisson models but not reliable for binomial models.
+
+\subsubsection{Bootstrap test}
+
+For general families (including binomial), a nonparametric bootstrap test is used:
+\begin{enumerate}
+    \item For $b = 1, \ldots, B$:
+    \begin{enumerate}
+        \item Draw a bootstrap sample $\{(Y_i^{*}, \mathbf{x}_i^{*})\}_{i=1}^n$ by sampling with replacement.
+        \item Fit the model to the bootstrap sample to obtain $\hat{\mu}_i^{*(b)}$.
+        \item Compute the bootstrap Pearson risk: $R_P^{(b)} = \frac{1}{n}\sum_{i=1}^n \frac{(Y_i^{*} - \hat{\mu}_i^{*(b)})^2}{V(\hat{\mu}_i^{*(b)})}$.
+    \end{enumerate}
+    \item Compute $\hat{p} = \frac{1}{B}\sum_{b=1}^B \mathbf{1}(R_P^{(b)} \geq 1)$.
+    \item The p-value is $p_{\text{boot}} = 2 \min(\hat{p},\; 1 - \hat{p})$.
+\end{enumerate}
+
+The default number of bootstrap replicates is $B = 100$.
+
+\subsection{Model Selection}
+
+A covariate set $S$ is \emph{causally valid} if its Pearson risk p-value exceeds the significance level~$\alpha$ (default $\alpha = 0.05$). Among all causally valid sets, the one with the lowest BIC is selected:
+\begin{equation}
+\hat{S} = \arg\min_{S:\; p_S > \alpha} \text{BIC}(S).
+\end{equation}
+
+The BIC criterion serves as a parsimony tie-breaker: if multiple covariate sets pass the Pearson risk test, the most parsimonious well-fitting model is preferred.
+
+\subsection{Search Strategies}
+\label{sec:search}
+
+\subsubsection{Exhaustive search (\texttt{search = "all"})}
+
+All $2^p - 1$ non-empty subsets of the $p$ covariates are evaluated. For each subset, the model is fitted, the Pearson risk p-value is computed, and the BIC is recorded. The subset with the lowest BIC among those passing the test is returned.
+
+This guarantees finding the global optimum but has exponential complexity: it becomes impractical for $p > 15$.
+
+\subsubsection{Stepwise search (\texttt{search = "stepwise"})}
+
+A two-phase greedy search:
+
+\paragraph{Forward phase.} Starting from the intercept-only model, at each step:
+\begin{enumerate}
+    \item For each remaining candidate variable, fit the model with that variable added and compute the Pearson risk p-value.
+    \item Select the variable whose addition yields the highest p-value.
+    \item Continue if the p-value increased compared to the previous step, or if it exceeds $\alpha$.
+\end{enumerate}
+
+\paragraph{Backward BIC phase.} Starting from the model obtained by the forward phase:
+\begin{enumerate}
+    \item For each variable currently in the model, compute the BIC of the model without that variable.
+    \item If removing a variable improves BIC, remove it and repeat.
+    \item Stop when no removal improves BIC.
+\end{enumerate}
+
+The stepwise search has $O(p^2)$ complexity per phase, making it feasible for large~$p$.
+
+\subsection{Handling Categorical Variables in Binomial Models}
+
+For binomial family models, an additional post-processing step handles categorical covariates. If the selected model contains categorical variables, the method tests whether removing them (individually or collectively) still yields a causally valid model. This addresses the fact that categorical variables can create spurious associations in logistic regression.
+
+% ============================================================================
+\section{Simulation Study}
+% ============================================================================
+
+\subsection{Data Generating Processes}
+
+We evaluate the method on five data-generating processes (DGPs) taken from the package examples. Each DGP defines a structural causal model with known causal parents of~$Y$.
+
+\subsubsection{DGP~1: Poisson GLM, $p = 2$}
+
+\begin{center}
+\begin{tikzpicture}[>={Stealth[length=3mm]}, node distance=2cm, every node/.style={draw, circle, minimum size=1cm}]
+    \node (X1) {$X_1$};
+    \node (Y)  [right=of X1] {$Y$};
+    \node (X2) [right=of Y]  {$X_2$};
+    \draw[->] (X1) -- (Y);
+    \draw[->] (Y) -- (X2);
+\end{tikzpicture}
+\end{center}
+
+\begin{align}
+X_1 &\sim \mathcal{N}(0, 1), \\
+Y \mid X_1 &\sim \text{Poisson}(\exp(X_1)), \\
+X_2 &= \log(Y + 1) + \varepsilon, \quad \varepsilon \sim \mathcal{N}(0, 0.3^2).
+\end{align}
+
+True causal parents: $\pa(Y) = \{X_1\}$. The variable $X_2$ is a noisy downstream effect of $Y$.
+
+\subsubsection{DGP~2: Binomial GLM, $p = 2$}
+
+\begin{center}
+\begin{tikzpicture}[>={Stealth[length=3mm]}, node distance=2cm, every node/.style={draw, circle, minimum size=1cm}]
+    \node (X1) {$X_1$};
+    \node (Y)  [right=of X1] {$Y$};
+    \node (X2) [right=of Y]  {$X_2$};
+    \draw[->] (X1) -- (Y);
+    \draw[->] (Y) -- (X2);
+\end{tikzpicture}
+\end{center}
+
+\begin{align}
+X_1 &\sim \mathcal{N}(0, 1), \\
+Y \mid X_1 &\sim \text{Bernoulli}\!\left(\frac{\exp(X_1)}{1 + \exp(X_1)}\right), \\
+X_2 &= (1 - F) \cdot Y + \varepsilon, \quad F \sim \text{Bernoulli}(0.1),\; \varepsilon \sim \mathcal{N}(0, 0.3^2).
+\end{align}
+
+True causal parents: $\pa(Y) = \{X_1\}$. The variable $X_2$ is a noisy copy of $Y$ with random label flipping.
+
+\subsubsection{DGP~3: Binomial GLM, $p = 5$}
+
+\begin{center}
+\begin{tikzpicture}[>={Stealth[length=3mm]}, node distance=1.8cm, every node/.style={draw, circle, minimum size=1cm}]
+    \node (X1) {$X_1$};
+    \node (X2) [right=of X1] {$X_2$};
+    \node (Y)  [right=of X2] {$Y$};
+    \node (X3) [above=1.2cm of Y] {$X_3$};
+    \node (X4) [below=1.2cm of X2] {$X_4$};
+    \node (X5) [right=of Y] {$X_5$};
+    \draw[->] (X1) -- (X2);
+    \draw[->] (X2) -- (Y);
+    \draw[->] (X3) -- (Y);
+    \draw[->] (X2) -- (X4);
+    \draw[->] (Y) -- (X5);
+\end{tikzpicture}
+\end{center}
+
+\begin{align}
+X_1 &\sim \mathcal{N}(0, 1), \quad X_2 \sim \mathcal{N}(X_1, 0.5^2), \quad X_3 \sim \mathcal{N}(0, 1), \\
+X_4 &\sim \mathcal{N}(X_2, 0.5^2), \\
+Y \mid X_2, X_3 &\sim \text{Bernoulli}\!\left(\frac{\exp(0.8 X_2 - 0.9 X_3)}{1 + \exp(0.8 X_2 - 0.9 X_3)}\right), \\
+X_5 &= (1-F) \cdot Y + F \cdot (1-Y) + \varepsilon, \quad F \sim \text{Bernoulli}(0.1).
+\end{align}
+
+True causal parents: $\pa(Y) = \{X_2, X_3\}$. The challenges are: $X_1$ is an ancestor (correlated with $X_2$), $X_4$ is a descendant of $X_2$, and $X_5$ is a noisy descendant of $Y$.
+
+\subsubsection{DGP~4: Poisson GAM, $p = 2$}
+
+Same DAG structure as DGP~1, but with a nonlinear causal mechanism:
+\begin{align}
+X_1 &\sim \mathcal{N}(0, 1), \\
+Y \mid X_1 &\sim \text{Poisson}(\exp(\sin(X_1))), \\
+X_2 &= \log(Y + 1) + \varepsilon, \quad \varepsilon \sim \mathcal{N}(0, 0.5^2).
+\end{align}
+
+True causal parents: $\pa(Y) = \{X_1\}$ via the smooth function $s(X_1)$.
+
+\subsubsection{DGP~5: Poisson GAM, $p = 7$}
+
+A complex structural causal model with seven covariates and nonlinear relationships:
+\begin{align}
+X_1 &\sim \mathcal{N}(0, 0.04), \quad X_2 = X_1 + \varepsilon_2, \quad X_3 = X_1 + X_2 + \varepsilon_3, \\
+m &= \sin(5 X_2) + X_3^3, \quad Z = m + \varepsilon_Z, \\
+X_4 &= X_2 + \varepsilon_4, \quad X_5 = Z + \varepsilon_5, \quad X_6 = Z + \varepsilon_6, \quad X_7 = X_6 + \varepsilon_7, \\
+Y &= Q_{\text{Pois}}\!\big(\Phi(Z; m, 0.04),\; \lambda = \exp(m)\big),
+\end{align}
+where all $\varepsilon_j \sim \mathcal{N}(0, 0.04)$, $\Phi$ is the normal CDF, and $Q_{\text{Pois}}$ is the Poisson quantile function.
+
+True causal parents: $\pa(Y) = \{X_2, X_3\}$ via smooth functions $s(X_2)$ and $s(X_3)$.
+
+\subsection{Experimental Setup}
+
+For each DGP, we vary the sample size $n$ and the method configuration:
+
+\begin{itemize}
+    \item \textbf{Sample sizes}: $n \in \{200, 500, 1000, 2000, 3000\}$ (DGP-dependent).
+    \item \textbf{Search strategies}: exhaustive (\texttt{all}) and stepwise (\texttt{stepwise}).
+    \item \textbf{P-value methods}: chi-square and bootstrap ($B = 100$), where applicable.
+    \item \textbf{Significance level}: $\alpha = 0.05$.
+    \item \textbf{Replicates}: 100 independent datasets per scenario.
+\end{itemize}
+
+The bootstrap p-value method is used for binomial models (DGPs~2--3), as the chi-square approximation is unreliable. Both methods are compared for Poisson models (DGP~1).
+
+For DGP~5 ($p = 7$), only the stepwise search is evaluated, as the exhaustive search over $2^7 - 1 = 127$ GAM models is computationally prohibitive for a simulation study.
+
+\subsection{Metrics}
+
+\begin{itemize}
+    \item \textbf{Exact recovery rate}: fraction of replicates where the selected model contains exactly the true causal parents (no more, no less).
+    \item \textbf{True positive rate (TPR)}: average fraction of true parents included in the selected model.
+    \item \textbf{Average false positives}: average number of non-parent variables included.
+\end{itemize}
+
+% ============================================================================
+\section{Results}
+% ============================================================================
+
+\subsection{Summary Table}
+
+Table~\ref{tab:results} reports the exact recovery rate, true positive rate, and average number of false positives across all scenarios.
+
+\begin{table}[htbp]
+\centering
+\caption{Simulation results: exact recovery rate, true positive rate, and average false positives across 100 replicates per scenario.}
+\label{tab:results}
+\small
+\input{results/table_results.tex}
+\end{table}
+
+\subsection{Recovery Rate by Sample Size}
+
+Figure~\ref{fig:recovery} shows the exact recovery rate as a function of sample size for each DGP.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_recovery_by_n.pdf}
+\caption{Exact recovery rate by sample size for each data-generating process. Different line styles correspond to different method configurations (search strategy and p-value method).}
+\label{fig:recovery}
+\end{figure}
+
+\subsection{Chi-square vs.\ Bootstrap P-value}
+
+Figure~\ref{fig:chisq_boot} compares the chi-square and bootstrap p-value methods for the Poisson GLM (DGP~1). Both methods are applicable here, allowing a direct comparison.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.65\textwidth]{figures/fig_chisq_vs_bootstrap.pdf}
+\caption{Comparison of chi-square and bootstrap p-value methods for Poisson GLM with $p=2$ covariates.}
+\label{fig:chisq_boot}
+\end{figure}
+
+\subsection{Detailed Analysis: Five-Covariate Binomial Case}
+
+Figure~\ref{fig:p5detail} provides a detailed view of the five-covariate binomial case (DGP~3), which is the most challenging linear scenario.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_binomial_p5_detail.pdf}
+\caption{Detailed metrics for the binomial GLM with $p=5$ covariates: exact recovery rate, true positive rate, and average false positives.}
+\label{fig:p5detail}
+\end{figure}
+
+% ============================================================================
+\section{Discussion}
+% ============================================================================
+
+The simulation study demonstrates that the Pearson risk invariance method successfully recovers the true causal parents across a range of settings:
+
+\begin{enumerate}
+    \item \textbf{Sample size}: Recovery rates improve with increasing $n$ across all DGPs. For the simple two-covariate Poisson case (DGP~1), near-perfect recovery is achieved at $n = 500$. More complex scenarios (DGP~3 with $p=5$, DGP~5 with $p=7$) require larger samples.
+
+    \item \textbf{Exhaustive vs.\ stepwise search}: The exhaustive search provides the best recovery guarantees, as it evaluates all possible subsets. The stepwise search is a practical alternative for larger $p$, with slightly lower recovery rates due to its greedy nature.
+
+    \item \textbf{Chi-square vs.\ bootstrap}: For Poisson models, the chi-square test is fast and performs comparably to the bootstrap. For binomial models, the bootstrap is required, as the chi-square approximation does not hold.
+
+    \item \textbf{Nonlinear models}: The GAM-based approach (DGPs~4--5) successfully handles nonlinear causal relationships by using smooth function terms, with recovery rates comparable to the linear case for similar problem complexity.
+
+    \item \textbf{Robustness}: The method correctly distinguishes causal parents from ancestors ($X_1$ in DGP~3), descendants ($X_4$, $X_5$ in DGP~3), and spurious correlates, even in the presence of strong correlations.
+\end{enumerate}
+
+% ============================================================================
+\section{Implementation Notes}
+% ============================================================================
+
+The \texttt{causalreg} package provides two main functions:
+
+\begin{itemize}
+    \item \texttt{cglm(formula, family, data, pval, search, ncores)}: causal discovery within a GLM.
+    \item \texttt{cgam(formula, family, data, pval, search, ncores)}: causal discovery within a GAM.
+\end{itemize}
+
+Both support parallel computation via the \texttt{ncores} parameter, which distributes model evaluations across cores using \texttt{parallel::mclapply}. Typical speedups are 3--5$\times$ for exhaustive search on multi-core machines.
+
+The package is available at \url{https://github.com/franciscorichter/causalreg}.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{1}
+\bibitem[Vinciotti and Wit(2026)]{vinciotti2026}
+V.~Vinciotti and E.~C. Wit.
+\newblock Causal generalized linear models.
+\newblock \emph{causalreg: R package version 0.1.2}, 2026.
+\newblock \url{https://CRAN.R-project.org/package=causalreg}.
+
+\bibitem[Polinelli et~al.(2026)]{polinelli2026}
+A.~Polinelli, V.~Vinciotti, and E.~C. Wit.
+\newblock Causal generalized linear models via {P}earson risk invariance.
+\newblock \emph{Journal of Causal Inference}, 2026.
+\end{thebibliography}
+
+\end{document}

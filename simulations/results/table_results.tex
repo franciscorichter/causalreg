@@ -1,0 +1,46 @@
+\begin{tabular}{llrrrrr}
+\toprule
+DGP & Method & $n$ & Recovery & TPR & Avg.\ FP & Avg.\ found \\
+\midrule
+Poisson GLM (p=2) & all + chi-sq & 200 & 95\% & 0.95 & 0.00 & 0.9 \\
+Poisson GLM (p=2) & all + chi-sq & 500 & 96\% & 0.96 & 0.00 & 1.0 \\
+Poisson GLM (p=2) & all + chi-sq & 1000 & 88\% & 0.88 & 0.00 & 0.9 \\
+Poisson GLM (p=2) & all + chi-sq & 2000 & 91\% & 0.91 & 0.00 & 0.9 \\
+Poisson GLM (p=2) & step + chi-sq & 200 & 100\% & 1.00 & 0.00 & 1.0 \\
+Poisson GLM (p=2) & step + chi-sq & 500 & 100\% & 1.00 & 0.00 & 1.0 \\
+Poisson GLM (p=2) & step + chi-sq & 1000 & 100\% & 1.00 & 0.00 & 1.0 \\
+Poisson GLM (p=2) & step + chi-sq & 2000 & 100\% & 1.00 & 0.00 & 1.0 \\
+Poisson GLM (p=2) & all + boot & 200 & 90\% & 0.90 & 0.00 & 0.9 \\
+Poisson GLM (p=2) & all + boot & 500 & 89\% & 0.89 & 0.00 & 0.9 \\
+Poisson GLM (p=2) & all + boot & 1000 & 94\% & 0.94 & 0.00 & 0.9 \\
+Poisson GLM (p=2) & all + boot & 2000 & 96\% & 0.96 & 0.00 & 1.0 \\
+Poisson GLM (p=2) & step + boot & 200 & 95\% & 0.95 & 0.00 & 0.9 \\
+Poisson GLM (p=2) & step + boot & 500 & 93\% & 0.93 & 0.00 & 0.9 \\
+Poisson GLM (p=2) & step + boot & 1000 & 97\% & 0.97 & 0.00 & 1.0 \\
+Poisson GLM (p=2) & step + boot & 2000 & 99\% & 0.99 & 0.00 & 1.0 \\
+\midrule
+Binomial GLM (p=2) & all + boot & 500 & 13\% & 0.97 & 0.86 & 1.8 \\
+Binomial GLM (p=2) & all + boot & 1000 & 45\% & 0.95 & 0.50 & 1.4 \\
+Binomial GLM (p=2) & all + boot & 2000 & 79\% & 0.94 & 0.15 & 1.1 \\
+Binomial GLM (p=2) & step + boot & 500 & 19\% & 0.96 & 0.80 & 1.8 \\
+Binomial GLM (p=2) & step + boot & 1000 & 42\% & 0.99 & 0.57 & 1.6 \\
+Binomial GLM (p=2) & step + boot & 2000 & 78\% & 0.93 & 0.15 & 1.1 \\
+\midrule
+Binomial GLM (p=5) & all + boot & 1000 & 15\% & 0.93 & 1.11 & 3.0 \\
+Binomial GLM (p=5) & all + boot & 2000 & 48\% & 0.98 & 0.69 & 2.7 \\
+Binomial GLM (p=5) & all + boot & 3000 & 67\% & 0.97 & 0.48 & 2.4 \\
+Binomial GLM (p=5) & step + boot & 1000 & 35\% & 0.94 & 0.62 & 2.5 \\
+Binomial GLM (p=5) & step + boot & 2000 & 53\% & 0.96 & 0.44 & 2.4 \\
+Binomial GLM (p=5) & step + boot & 3000 & 80\% & 0.94 & 0.15 & 2.0 \\
+\midrule
+Poisson GAM (p=2) & all + chi-sq & 500 & 92\% & 0.92 & 0.03 & 0.9 \\
+Poisson GAM (p=2) & all + chi-sq & 1000 & 96\% & 0.96 & 0.00 & 1.0 \\
+Poisson GAM (p=2) & all + chi-sq & 2000 & 95\% & 0.95 & 0.00 & 0.9 \\
+Poisson GAM (p=2) & step + chi-sq & 500 & 100\% & 1.00 & 0.00 & 1.0 \\
+Poisson GAM (p=2) & step + chi-sq & 1000 & 100\% & 1.00 & 0.00 & 1.0 \\
+Poisson GAM (p=2) & step + chi-sq & 2000 & 100\% & 1.00 & 0.00 & 1.0 \\
+\midrule
+Poisson GAM (p=7) & step + chi-sq & 500 & 62\% & 0.67 & 0.37 & 1.7 \\
+Poisson GAM (p=7) & step + chi-sq & 1000 & 64\% & 0.69 & 0.35 & 1.7 \\
+\bottomrule
+\end{tabular}
