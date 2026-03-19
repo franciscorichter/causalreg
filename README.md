@@ -181,6 +181,61 @@ The underlying method is described in:
 > Polinelli, A., V. Vinciotti and E.C. Wit. (2026). "Causal generalized linear
 > models via Pearson risk invariance." *Journal of Causal Inference*.
 
+## Changelog
+
+### This fork (franciscorichter/causalreg) vs CRAN v0.1.2
+
+The original CRAN package by Vinciotti and Wit
+([source](https://cran.r-universe.dev/causalreg)) contained four near-identical
+internal files (`cglm_all`, `cgam_all`, `cglm_step`, `cgam_step`) with
+substantial code duplication. This fork refactors the codebase for clarity and
+efficiency while preserving the statistical method exactly.
+
+**Code cleanup and deduplication**
+
+- Merged `cglm_all.R` and `cgam_all.R` into a single `causal_all.R` with a
+  `use_gam` flag, eliminating ~95% duplicated code.
+- Merged `cglm_step.R` and `cgam_step.R` into a single `causal_step.R`.
+- Extracted shared logic into `helpers.R`: model fitting (`.fit_model`),
+  effective degrees of freedom (`.compute_edf`), Pearson p-value computation
+  (`.fit_and_test`), and categorical variable handling
+  (`.handle_categorical_all`, `.handle_categorical_step`).
+- Total: 4 implementation files reduced to 3 with shared internals.
+
+**Bug fixes**
+
+- Fixed `cgam_step.R` line 89: bootstrap p-value was computed on `fmli` (the
+  last formula from the inner loop) instead of `mod.min` (the selected model).
+- Fixed `cgam.R`: default `pval` argument was `"chi-squared"` (with trailing
+  'd') but internal comparisons used `"chi-square"`, so the chi-square option
+  silently fell through to bootstrap for `cgam()`.
+- Fixed `cgam_all`: `pearsonrisk` output contained the raw Pearson statistic
+  instead of the Pearson risk (divided by n), inconsistent with `cglm_all`.
+- Added `match.arg()` validation for `pval` and `search` parameters in both
+  `cglm()` and `cgam()` (previously, invalid values were silently accepted).
+
+**Computational efficiency**
+
+- Pre-allocated all numeric vectors (`pearson_all`, `pv_all`, `bic_all`,
+  `pvals`, `bics`, bootstrap `pr`). The original code used `c(vec, val)` inside
+  loops, causing O(n^2) memory allocation.
+- Stepwise forward phase: reuses the stored p-value from the inner loop instead
+  of refitting the selected model and recomputing the p-value (saves 1 + B
+  model fits per forward step when using bootstrap).
+- Stepwise backward BIC phase: reuses the stored BIC from the inner loop
+  instead of refitting the selected model (saves 1 model fit per backward step).
+- `boot_pval`: uses `sample.int(n)` instead of `sample(1:n)` and explicit
+  `use_gam` dispatch instead of fragile `all.vars(formula)[2] == "."` heuristic.
+
+**Packaging**
+
+- Added README with full API documentation and usage guide.
+- Added vignette (`vignettes/introduction.Rmd`) with worked examples.
+- Added testthat tests (22 tests covering all function/family/search/pval
+  combinations).
+- Added `.gitignore`, `.Rbuildignore`.
+- R CMD check passes with Status: OK.
+
 ## License
 
 GPL-3
