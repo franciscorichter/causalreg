@@ -1,7 +1,7 @@
 # Unified stepwise search for causal submodels (replaces cglm_step and cgam_step)
 causal_step <- function(formula, family, data, alpha = 0.05,
                         pval = "bootstrap", B = 100,
-                        use_gam = FALSE, ...) {
+                        use_gam = FALSE, ncores = 1L, ...) {
   n <- nrow(data)
   vrs <- all.vars(formula)
   dip_name <- as.character(formula[[2]])
@@ -41,24 +41,43 @@ causal_step <- function(formula, family, data, alpha = 0.05,
   var_in_model <- character(0)  # already in the model
 
   continue <- TRUE
+  dots <- list(...)
 
   # === Forward phase ===
   while (continue && length(var_available) > 0) {
     n_cand <- length(var_available)
-    pvals <- numeric(n_cand)
+    current_mod <- mod_step[[step_count]]
 
-    for (i in seq_len(n_cand)) {
-      fmli <- update.formula(mod_step[[step_count]], paste0("~. +", var_available[i]))
-      result <- .fit_and_test(fmli, family, data, n, pval_method, B,
-                              effective_gam, ...)
-      pvals[i] <- result$pval
+    if (ncores > 1L) {
+      # Parallel: evaluate candidates across cores
+      eval_cand <- function(i) {
+        fmli <- update.formula(current_mod, paste0("~. +", var_available[i]))
+        do.call(.fit_and_test, c(list(formula = fmli, family = family,
+                                      data = data, n = n, pval_method = pval_method,
+                                      B = B, use_gam = effective_gam,
+                                      ncores = 1L), dots))
+      }
+      cand_results <- parallel::mclapply(seq_len(n_cand), eval_cand,
+                                          mc.cores = ncores, mc.set.seed = TRUE)
+      pvals <- vapply(cand_results, function(r) r$pval, numeric(1))
+    } else {
+      pvals <- numeric(n_cand)
+      for (i in seq_len(n_cand)) {
+        fmli <- update.formula(current_mod, paste0("~. +", var_available[i]))
+        result <- do.call(.fit_and_test, c(list(formula = fmli, family = family,
+                                                data = data, n = n,
+                                                pval_method = pval_method,
+                                                B = B, use_gam = effective_gam,
+                                                ncores = 1L), dots))
+        pvals[i] <- result$pval
+      }
     }
 
     i_best <- which.max(pvals)
-    pv_best <- pvals[i_best]  # reuse stored p-value (avoids redundant refit)
+    pv_best <- pvals[i_best]
 
     # Build the selected model with sorted terms
-    mod_new <- update.formula(mod_step[[step_count]], paste0("~. +", var_available[i_best]))
+    mod_new <- update.formula(current_mod, paste0("~. +", var_available[i_best]))
     term_labels <- attr(terms.formula(mod_new), "term.labels")
     mod_new <- reformulate(sort(term_labels), response = dip_name, intercept = intercept)
 
@@ -81,15 +100,26 @@ causal_step <- function(formula, family, data, alpha = 0.05,
   improve <- TRUE
   while (improve && length(var_in_model) >= 1) {
     n_vars <- length(var_in_model)
-    bics <- numeric(n_vars)
 
-    for (i in seq_len(n_vars)) {
-      fmli <- update.formula(model_current, paste0("~. -", var_in_model[i]))
-      bics[i] <- BIC(.fit_model(fmli, family, data, effective_gam, ...))
+    if (ncores > 1L) {
+      eval_drop <- function(i) {
+        fmli <- update.formula(model_current, paste0("~. -", var_in_model[i]))
+        do.call(BIC, list(do.call(.fit_model, c(list(formula = fmli, family = family,
+                                                     data = data, use_gam = effective_gam),
+                                                dots))))
+      }
+      bics <- unlist(parallel::mclapply(seq_len(n_vars), eval_drop,
+                                         mc.cores = ncores))
+    } else {
+      bics <- numeric(n_vars)
+      for (i in seq_len(n_vars)) {
+        fmli <- update.formula(model_current, paste0("~. -", var_in_model[i]))
+        bics[i] <- BIC(.fit_model(fmli, family, data, effective_gam, ...))
+      }
     }
 
     i_best <- which.min(bics)
-    bic_best <- bics[i_best]  # reuse stored BIC (avoids redundant refit)
+    bic_best <- bics[i_best]
 
     if (bic_best < bic_current) {
       model_current <- update.formula(model_current, paste0("~. -", var_in_model[i_best]))
@@ -109,7 +139,8 @@ causal_step <- function(formula, family, data, alpha = 0.05,
   # === Handle categorical variables for binomial family ===
   mod_opt_str <- deparse1(mod_step[[step_count]])
   new_opt_str <- .handle_categorical_step(mod_opt_str, family, data, alpha, n, dip_name,
-                                          pval_method, B, effective_gam, ...)
+                                          pval_method, B, effective_gam,
+                                          ncores = ncores, ...)
 
   if (new_opt_str != mod_opt_str) {
     step_count <- step_count + 1L

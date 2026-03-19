@@ -1,7 +1,7 @@
 # Unified exhaustive search for causal submodels (replaces cglm_all and cgam_all)
 causal_all <- function(formula, family, data, alpha = 0.05,
                        pval = "bootstrap", B = 100,
-                       use_gam = FALSE, ...) {
+                       use_gam = FALSE, ncores = 1L, ...) {
   n <- nrow(data)
   vrs <- all.vars(formula)
   dip_name <- as.character(formula[[2]])
@@ -43,12 +43,30 @@ causal_all <- function(formula, family, data, alpha = 0.05,
   pv_all <- numeric(n_models)
   bic_all <- numeric(n_models)
 
-  for (j in seq_len(n_models)) {
-    result <- .fit_and_test(mod_all[[j]], family, data, n, pval, B,
-                            effective_gam, ...)
-    pearson_all[j] <- result$pearson
-    pv_all[j] <- result$pval
-    bic_all[j] <- result$bic
+  if (ncores > 1L) {
+    # Parallel: evaluate models across cores, bootstrap within each is sequential
+    dots <- list(...)
+    eval_model <- function(j) {
+      do.call(.fit_and_test, c(list(formula = mod_all[[j]], family = family,
+                                    data = data, n = n, pval_method = pval,
+                                    B = B, use_gam = effective_gam,
+                                    ncores = 1L), dots))
+    }
+    all_results <- parallel::mclapply(seq_len(n_models), eval_model,
+                                      mc.cores = ncores, mc.set.seed = TRUE)
+    for (j in seq_len(n_models)) {
+      pearson_all[j] <- all_results[[j]]$pearson
+      pv_all[j] <- all_results[[j]]$pval
+      bic_all[j] <- all_results[[j]]$bic
+    }
+  } else {
+    for (j in seq_len(n_models)) {
+      result <- .fit_and_test(mod_all[[j]], family, data, n, pval, B,
+                              effective_gam, ncores = 1L, ...)
+      pearson_all[j] <- result$pearson
+      pv_all[j] <- result$pval
+      bic_all[j] <- result$bic
+    }
   }
 
   # Select optimal model: best BIC among causal models (p-value > alpha)

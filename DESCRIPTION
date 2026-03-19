@@ -15,7 +15,7 @@ Encoding: UTF-8
 URL: https://github.com/franciscorichter/causalreg
 BugReports: https://github.com/franciscorichter/causalreg/issues
 RoxygenNote: 7.3.3
-Imports: mgcv
+Imports: mgcv, parallel
 Suggests:
     knitr,
     rmarkdown,

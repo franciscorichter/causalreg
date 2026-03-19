@@ -12,6 +12,7 @@ cglm(
   pval = c("bootstrap", "chi-square"),
   B = 100,
   search = c("all", "stepwise"),
+  ncores = 1L,
   ...
 )
 }
@@ -29,6 +30,8 @@ cglm(
 \item{B}{Number of bootstrap samples when pval="bootstrap". Default is 100.}
 
 \item{search}{If search="stepwise", a greedy forward stepwise search is conducted. Default is search="all", in which case all possible submodels are considered.}
+
+\item{ncores}{Number of cores for parallel computation. Default is 1 (sequential). When ncores > 1, model evaluations are distributed across cores using \code{parallel::mclapply} (Unix/macOS). On Windows, parallelization is not supported and this parameter is ignored.}
 
 \item{...}{Further arguments to be passed to the glm function.}
 }
