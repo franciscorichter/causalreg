@@ -26,8 +26,9 @@
 }
 
 # Fit model and compute Pearson risk, p-value, and BIC
+# ncores is passed to boot_pval for bootstrap parallelization
 .fit_and_test <- function(formula, family, data, n, pval_method, B,
-                          use_gam, ...) {
+                          use_gam, ncores = 1L, ...) {
   fit <- .fit_model(formula, family, data, use_gam, ...)
   ps <- sum(residuals(fit, type = "pearson")^2)
   edf <- .compute_edf(fit, use_gam)
@@ -37,7 +38,7 @@
     pv <- .pearson_chisq_pval(ps, n - edf)
   } else {
     pv <- boot_pval(formula, family = family, data = data, B = B,
-                    use_gam = use_gam, ...)
+                    use_gam = use_gam, ncores = ncores, ...)
   }
 
   list(pearson = ps / n, pval = pv, bic = bic_val)
@@ -95,7 +96,7 @@
 # Handle categorical variable post-processing for binomial family (stepwise search)
 # Fits models and computes p-values directly
 .handle_categorical_step <- function(mod_opt, family, data, alpha, n, response_name,
-                                     pval_method, B, use_gam, ...) {
+                                     pval_method, B, use_gam, ncores = 1L, ...) {
   if (family != "binomial") return(mod_opt)
 
   var_cat <- .find_categorical(data)
@@ -108,7 +109,8 @@
   if (length(var_noncat) > 0) {
     mod_test <- reformulate(var_noncat, response = response_name)
     fmli <- update.formula(as.formula(mod_opt), mod_test)
-    result <- .fit_and_test(fmli, family, data, n, pval_method, B, use_gam, ...)
+    result <- .fit_and_test(fmli, family, data, n, pval_method, B, use_gam,
+                            ncores = ncores, ...)
     if (result$pval > alpha) return(deparse1(fmli))
   }
 
@@ -116,7 +118,8 @@
   varc <- var_cat[var_cat %in% var_mod]
   for (i in seq_along(varc)) {
     fmli <- update.formula(as.formula(mod_opt), paste0("~. -", varc[i]))
-    result <- .fit_and_test(fmli, family, data, n, pval_method, B, use_gam, ...)
+    result <- .fit_and_test(fmli, family, data, n, pval_method, B, use_gam,
+                            ncores = ncores, ...)
     if (result$pval > alpha) {
       mod_opt <- deparse1(fmli)
     }

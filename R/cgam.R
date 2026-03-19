@@ -9,6 +9,7 @@
 #' @param pval If pval="bootstrap", a bootstrap test is conducted to test whether Pearson risk is 1. When family="poisson" a chi-squared test can be conducted by setting pval="chi-square".
 #' @param B Number of bootstrap samples when pval="bootstrap". Default is 100.
 #' @param search If search="stepwise", a greedy forward stepwise search is conducted. Default is search="all", in which case all possible submodels are considered.
+#' @param ncores Number of cores for parallel computation. Default is 1 (sequential). When ncores > 1, model evaluations are distributed across cores using \code{parallel::mclapply} (Unix/macOS). On Windows, parallelization is not supported and this parameter is ignored.
 #' @param ... Further arguments to be passed to the gam function.
 #' @return A list containing the selected causal submodel and search diagnostics.
 #' @references
@@ -69,15 +70,15 @@
 #' @export
 cgam <- function(formula, family, data, alpha = 0.05,
                  pval = c("bootstrap", "chi-square"), B = 100,
-                 search = c("all", "stepwise"), ...) {
+                 search = c("all", "stepwise"), ncores = 1L, ...) {
   pval <- match.arg(pval)
   search <- match.arg(search)
 
   if (search == "all") {
     causal_all(formula, family = family, data = data, alpha = alpha,
-               pval = pval, B = B, use_gam = TRUE, ...)
+               pval = pval, B = B, use_gam = TRUE, ncores = ncores, ...)
   } else {
     causal_step(formula, family = family, data = data, alpha = alpha,
-                pval = pval, B = B, use_gam = TRUE, ...)
+                pval = pval, B = B, use_gam = TRUE, ncores = ncores, ...)
   }
 }
