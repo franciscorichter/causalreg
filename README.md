@@ -1,5 +1,10 @@
 # causalreg
 
+> **Note:** This is a fork of the
+> [`causalreg`](https://cran.r-universe.dev/causalreg) CRAN package by
+> Vinciotti and Wit, refactored for code clarity and efficiency. The
+> statistical method is unchanged.
+
 Causal discovery in generalized linear models (GLMs) and generalized additive
 models (GAMs) via **Pearson risk invariance**.
 
@@ -157,6 +162,21 @@ lowest BIC is selected.
 ## Citation
 
 If you use this package, please cite:
+
+> Vinciotti V, Wit EC (2026). *causalreg: Causal Generalized Linear Models*.
+> R package version 0.1.2, <https://CRAN.R-project.org/package=causalreg>.
+
+```bibtex
+@Manual{,
+  title = {causalreg: Causal Generalized Linear Models},
+  author = {Veronica Vinciotti and Ernst C. Wit},
+  year = {2026},
+  note = {R package version 0.1.2},
+  url = {https://CRAN.R-project.org/package=causalreg},
+}
+```
+
+The underlying method is described in:
 
 > Polinelli, A., V. Vinciotti and E.C. Wit. (2026). "Causal generalized linear
 > models via Pearson risk invariance." *Journal of Causal Inference*.
