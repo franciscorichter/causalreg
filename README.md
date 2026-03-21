@@ -183,7 +183,36 @@ The underlying method is described in:
 
 ## Changelog
 
-### This fork (franciscorichter/causalreg) vs CRAN v0.1.2
+### v0.2.0 — C++ acceleration via Rcpp (March 2026)
+
+**C++ fast path for GLM fitting (Rcpp/RcppArmadillo)**
+
+- Added `src/fast_glm.cpp` implementing a bare-bones IRLS solver for Poisson
+  (log link) and binomial (logit link) families, operating directly on design
+  matrices to avoid formula parsing and model-frame overhead.
+- Reimplemented Pearson chi-square statistic, log-likelihood, and BIC
+  computation in C++ as single-pass routines (`pearson_stat_cpp`,
+  `glm_loglik_cpp`, `fast_glm_bic`).
+- Moved the full bootstrap resampling loop into C++ (`boot_pval_cpp`),
+  eliminating per-replicate R interpreter round-trips.
+- Added batch submodel evaluator (`eval_submodels_cpp`) for exhaustive search.
+- Modified `helpers.R`, `boot_pval.R`, `causal_all.R`, `causal_step.R`, and
+  `cglm.R` to auto-dispatch to the C++ fast path when applicable.
+- New `use_cpp` parameter in `cglm()` (default `TRUE`); set to `FALSE` to
+  restore pure-R behavior. `cgam()` is unaffected (always uses R/mgcv).
+- Achieves 1.4--8.7× speedups depending on scenario (see benchmark table above).
+
+**Benchmark and report**
+
+- Added `simulations/benchmark.R` with 7 scenarios comparing C++ vs R.
+- Added `simulations/benchmark_report.tex` / `.pdf` (3-page LaTeX report).
+
+**Reference fix**
+
+- Corrected Polinelli et al. citation from 2026 Journal of Causal Inference
+  to 2024 arXiv preprint.
+
+### v0.1.2-fork — Refactored fork vs CRAN v0.1.2
 
 The original CRAN package by Vinciotti and Wit
 ([source](https://cran.r-universe.dev/causalreg)) contained four near-identical

@@ -1,6 +1,6 @@
 Package: causalreg
 Title: Causal Generalized Linear Models
-Version: 0.1.2
+Version: 0.2.0
 Authors@R: c(person(given = "Veronica",
                         family = "Vinciotti",
                         role = c("aut", "cre"),
