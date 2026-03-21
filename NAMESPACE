@@ -2,6 +2,8 @@
 
 export(cgam)
 export(cglm)
+useDynLib(causalreg, .registration = TRUE)
+importFrom(Rcpp, sourceCpp)
 importFrom(mgcv,gam)
 importFrom(stats,BIC)
 importFrom(stats,as.formula)

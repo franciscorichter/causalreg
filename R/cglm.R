@@ -13,8 +13,7 @@
 #' @param ... Further arguments to be passed to the glm function.
 #' @return A list containing the selected causal submodel and search diagnostics.
 #' @references
-#' Polinelli, A., V. Vinciotti and E.C. Wit. (2026). "Causal generalized linear models via Pearson risk invariance" *Journal of Causal
-#' Inference*.
+#' Polinelli, A., V. Vinciotti and E.C. Wit. (2024). "Causal generalized linear models via Pearson risk invariance" *arXiv preprint*.
 #' @importFrom stats BIC as.formula coef glm pchisq reformulate residuals terms.formula update.formula na.omit
 #' @importFrom utils combn
 #' @examples
@@ -64,18 +63,22 @@
 #' mod.step <-cglm(Y~X1+X2+X3+X4+X5,"binomial",dat,pval="bootstrap",search="stepwise")
 #' mod.step$model.opt
 #' }
+#' @param use_cpp Logical; if TRUE (default), use fast C++ implementations for supported families.
 #' @export
 cglm <- function(formula, family, data, alpha = 0.05,
                  pval = c("bootstrap", "chi-square"), B = 100,
-                 search = c("all", "stepwise"), ncores = 1L, ...) {
+                 search = c("all", "stepwise"), ncores = 1L,
+                 use_cpp = TRUE, ...) {
   pval <- match.arg(pval)
   search <- match.arg(search)
 
   if (search == "all") {
     causal_all(formula, family = family, data = data, alpha = alpha,
-               pval = pval, B = B, use_gam = FALSE, ncores = ncores, ...)
+               pval = pval, B = B, use_gam = FALSE, ncores = ncores,
+               use_cpp = use_cpp, ...)
   } else {
     causal_step(formula, family = family, data = data, alpha = alpha,
-                pval = pval, B = B, use_gam = FALSE, ncores = ncores, ...)
+                pval = pval, B = B, use_gam = FALSE, ncores = ncores,
+                use_cpp = use_cpp, ...)
   }
 }
