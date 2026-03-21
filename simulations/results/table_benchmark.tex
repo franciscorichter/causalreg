@@ -1,0 +1,13 @@
+\begin{tabular}{lrrr}
+\toprule
+Scenario & R (ms) & C++ (ms) & Speedup \\
+\midrule
+Poisson, chi-sq, all, p=2, n=1000 & 5.7 & 2.5 & 2.3$\times$ \\
+Poisson, chi-sq, all, p=5, n=1000 & 51.8 & 14.9 & 3.5$\times$ \\
+Poisson, chi-sq, step, p=5, n=1000 & 49.2 & 34.1 & 1.4$\times$ \\
+Binomial, boot B=50, all, p=2, n=2000 & 399.3 & 45.7 & 8.7$\times$ \\
+Binomial, boot B=50, all, p=5, n=3000 & 6538.0 & 916.2 & 7.1$\times$ \\
+Binomial, boot B=50, step, p=5, n=3000 & 3007.7 & 441.8 & 6.8$\times$ \\
+Poisson, chi-sq, all, p=3, n=10000 & 80.3 & 25.3 & 3.2$\times$ \\
+\bottomrule
+\end{tabular}

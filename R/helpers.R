@@ -28,7 +28,30 @@
 # Fit model and compute Pearson risk, p-value, and BIC
 # ncores is passed to boot_pval for bootstrap parallelization
 .fit_and_test <- function(formula, family, data, n, pval_method, B,
-                          use_gam, ncores = 1L, ...) {
+                          use_gam, ncores = 1L, use_cpp = TRUE, ...) {
+  # Fast C++ path for GLM with supported families
+  if (use_cpp && !use_gam && family %in% c("poisson", "binomial") &&
+      length(list(...)) == 0) {
+    mf <- model.frame(formula, data)
+    X <- model.matrix(formula, mf)
+    y <- as.numeric(model.response(mf))
+    p <- ncol(X)
+
+    fit_cpp <- fast_glm_fit(X, y, family)
+    mu <- fit_cpp$fitted_values
+    ps <- pearson_stat_cpp(y, mu, family)
+    bic_val <- fast_glm_bic(y, mu, family, p, n)
+
+    if (pval_method == "chi-square") {
+      pv <- .pearson_chisq_pval(ps, n - p)
+    } else {
+      pv <- boot_pval_cpp(X, y, family, as.integer(B))
+    }
+
+    return(list(pearson = ps / n, pval = pv, bic = bic_val))
+  }
+
+  # Original R path
   fit <- .fit_model(formula, family, data, use_gam, ...)
   ps <- sum(residuals(fit, type = "pearson")^2)
   edf <- .compute_edf(fit, use_gam)
@@ -38,7 +61,7 @@
     pv <- .pearson_chisq_pval(ps, n - edf)
   } else {
     pv <- boot_pval(formula, family = family, data = data, B = B,
-                    use_gam = use_gam, ncores = ncores, ...)
+                    use_gam = use_gam, ncores = ncores, use_cpp = use_cpp, ...)
   }
 
   list(pearson = ps / n, pval = pv, bic = bic_val)

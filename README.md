@@ -178,8 +178,8 @@ If you use this package, please cite:
 
 The underlying method is described in:
 
-> Polinelli, A., V. Vinciotti and E.C. Wit. (2026). "Causal generalized linear
-> models via Pearson risk invariance." *Journal of Causal Inference*.
+> Polinelli, A., V. Vinciotti and E.C. Wit. (2024). "Causal generalized linear
+> models via Pearson risk invariance." *arXiv preprint*.
 
 ## Changelog
 
@@ -235,6 +235,29 @@ efficiency while preserving the statistical method exactly.
   combinations).
 - Added `.gitignore`, `.Rbuildignore`.
 - R CMD check passes with Status: OK.
+
+## C++ Acceleration (Rcpp)
+
+*Last updated: March 2026*
+
+Core GLM fitting, Pearson statistic computation, and bootstrap resampling have
+been reimplemented in C++ via RcppArmadillo. The fast path activates
+automatically for `cglm()` with `"poisson"` or `"binomial"` families. Set
+`use_cpp = FALSE` to use the original pure-R implementation.
+
+Benchmark results (median wall-clock time, Apple Silicon ARM64, R 4.4.2):
+
+| Scenario | R (ms) | C++ (ms) | Speedup |
+|----------|-------:|--------:|--------:|
+| Poisson, χ², all, p=2, n=1,000 | 5.7 | 2.5 | 2.3× |
+| Poisson, χ², all, p=5, n=1,000 | 51.8 | 14.9 | 3.5× |
+| Poisson, χ², step, p=5, n=1,000 | 49.2 | 34.1 | 1.4× |
+| Binomial, boot B=50, all, p=2, n=2,000 | 399.3 | 45.7 | 8.7× |
+| Binomial, boot B=50, all, p=5, n=3,000 | 6,538.0 | 916.2 | 7.1× |
+| Binomial, boot B=50, step, p=5, n=3,000 | 3,007.7 | 441.8 | 6.8× |
+| Poisson, χ², all, p=3, n=10,000 | 80.3 | 25.3 | 3.2× |
+
+See `simulations/benchmark_report.pdf` for the full technical report.
 
 ## License
 

@@ -1,5 +1,15 @@
 boot_pval <- function(formula, family, data, B = 100, use_gam = FALSE,
-                      ncores = 1L, ...) {
+                      ncores = 1L, use_cpp = TRUE, ...) {
+  # Fast C++ path for GLM with supported families
+  if (use_cpp && !use_gam && family %in% c("poisson", "binomial") &&
+      length(list(...)) == 0) {
+    mf <- model.frame(formula, data)
+    X <- model.matrix(formula, mf)
+    y <- as.numeric(model.response(mf))
+    return(boot_pval_cpp(X, y, family, as.integer(B)))
+  }
+
+  # Original R path
   n <- nrow(data)
   dots <- list(...)
 

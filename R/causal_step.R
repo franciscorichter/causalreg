@@ -1,7 +1,8 @@
 # Unified stepwise search for causal submodels (replaces cglm_step and cgam_step)
 causal_step <- function(formula, family, data, alpha = 0.05,
                         pval = "bootstrap", B = 100,
-                        use_gam = FALSE, ncores = 1L, ...) {
+                        use_gam = FALSE, ncores = 1L,
+                        use_cpp = TRUE, ...) {
   n <- nrow(data)
   vrs <- all.vars(formula)
   dip_name <- as.character(formula[[2]])
@@ -55,7 +56,7 @@ causal_step <- function(formula, family, data, alpha = 0.05,
         do.call(.fit_and_test, c(list(formula = fmli, family = family,
                                       data = data, n = n, pval_method = pval_method,
                                       B = B, use_gam = effective_gam,
-                                      ncores = 1L), dots))
+                                      ncores = 1L, use_cpp = use_cpp), dots))
       }
       cand_results <- parallel::mclapply(seq_len(n_cand), eval_cand,
                                           mc.cores = ncores, mc.set.seed = TRUE)
@@ -68,7 +69,7 @@ causal_step <- function(formula, family, data, alpha = 0.05,
                                                 data = data, n = n,
                                                 pval_method = pval_method,
                                                 B = B, use_gam = effective_gam,
-                                                ncores = 1L), dots))
+                                                ncores = 1L, use_cpp = use_cpp), dots))
         pvals[i] <- result$pval
       }
     }
