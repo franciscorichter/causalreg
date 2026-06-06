@@ -126,16 +126,25 @@ Both functions share the same interface:
 
 ## How it works
 
-The method is based on the following insight: in a correctly specified GLM/GAM
-for a response Y given its true causal parents **X**_pa, the Pearson risk
+The method rests on a population-level identity. For a response Y and a set of
+candidate parents **X**, the **Pearson risk** is the expected squared Pearson
+residual
 
-R_P = (1/n) * sum of squared Pearson residuals
+R_P = E[ (Y − μ(**X**))² / V(μ(**X**)) ]
 
-converges to 1. If the model includes non-causal variables or omits causal
-ones, the Pearson risk deviates from 1.
+where μ(**X**) is the conditional mean and V(·) is the family's variance
+function. When the model is correctly specified with respect to the true causal
+parents, the conditional variance of Y equals V(μ(**X**)), so each squared
+Pearson residual has expectation 1 and therefore
 
-The algorithm searches over subsets of the provided covariates, testing each
-subset's Pearson risk against the null hypothesis R_P = 1 using either:
+R_P = 1   (exactly, for the causal model).
+
+If the model includes non-causal variables or omits causal ones, the mean or
+variance structure is misspecified and R_P ≠ 1.
+
+Empirically, R_P is estimated by the average of the squared Pearson residuals,
+(1/n) · Σ r̂ᵢ², and for each candidate subset the algorithm performs a
+statistical test of the null hypothesis H₀: R_P = 1 using either:
 
 - A **chi-square test** (fast, asymptotically valid for Poisson models), or
 - A **bootstrap test** (general, works for any family including binomial).
@@ -161,27 +170,68 @@ lowest BIC is selected.
 
 ## Citation
 
-If you use this package, please cite:
+If you use this package, please cite the paper describing the method:
 
-> Vinciotti V, Wit EC (2026). *causalreg: Causal Generalized Linear Models*.
-> R package version 0.1.2, <https://CRAN.R-project.org/package=causalreg>.
+> Polinelli A, Vinciotti V, Wit EC (2026). "Causal generalized linear models via
+> Pearson risk invariance." *Journal of Causal Inference*, 14(1), 20240043.
+> <https://doi.org/10.1515/jci-2024-0043>
 
 ```bibtex
-@Manual{,
-  title = {causalreg: Causal Generalized Linear Models},
-  author = {Veronica Vinciotti and Ernst C. Wit},
-  year = {2026},
-  note = {R package version 0.1.2},
-  url = {https://CRAN.R-project.org/package=causalreg},
+@article{polinelli2026causal,
+  title   = {Causal generalized linear models via {Pearson} risk invariance},
+  author  = {Polinelli, A. and Vinciotti, Veronica and Wit, Ernst C.},
+  journal = {Journal of Causal Inference},
+  year    = {2026},
+  volume  = {14},
+  number  = {1},
+  pages   = {20240043},
+  doi     = {10.1515/jci-2024-0043},
 }
 ```
 
-The underlying method is described in:
-
-> Polinelli, A., V. Vinciotti and E.C. Wit. (2024). "Causal generalized linear
-> models via Pearson risk invariance." *arXiv preprint*.
-
 ## Changelog
+
+### v0.2.1 — Faster GAM bootstrap (June 2026)
+
+The v0.2.0 C++ acceleration covered only `cglm()`. `cgam()` with
+`pval = "bootstrap"` stayed on pure R/mgcv and could be very slow, because every
+bootstrap resample re-ran mgcv's smoothing-parameter (REML/GCV) selection. An
+exhaustive search over 5 covariates (31 models, `B = 100`) on `n = 5000`
+binomial data took roughly **43 minutes**.
+
+- **New `fast_gam` argument in `cgam()`** (default `TRUE`). When enabled, the
+  smoothing parameters chosen on the original data — once per candidate model —
+  are held fixed across that model's bootstrap resamples, so each resample fit is
+  a single penalized IRLS rather than a full smoothing-parameter search. This is
+  an approximation of the fully re-selected bootstrap (individual bootstrap
+  p-values can shift, more so at small `B`), but it produced the **same model
+  selection** in all validation runs. Because it is now the default, GAM
+  bootstrap results differ slightly from v0.2.0 — pass `fast_gam = FALSE` to
+  recover the exact (re-selected) bootstrap.
+- **`ncores` now matters for GAM too.** Model evaluations parallelize across
+  cores via `parallel::mclapply` — this is exact (no approximation). The two
+  levers compose.
+
+Timings on the `n = 5000`, 5-covariate, `B = 100` example (Apple M1 Max);
+all three configurations select the same model `Y ~ s(X2) + s(X3) + s(X5)`:
+
+| Configuration | Time | Speedup |
+|---|------:|------:|
+| `ncores = 1, fast_gam = FALSE` (v0.2.0 behavior) | ~43 min | 1.0× |
+| `ncores = 8, fast_gam = FALSE` (exact, parallel) | 20.0 min | 2.1× |
+| `ncores = 8, fast_gam = TRUE`  (parallel + fixed sp) | 7.7 min | 5.6× |
+
+```r
+# fast_gam = TRUE is the default; add ncores for large searches
+cgam(fml, "binomial", data, pval = "bootstrap", search = "all", ncores = 8)
+
+# exact (re-selected) bootstrap, matching v0.2.0 — slower
+cgam(fml, "binomial", data, pval = "bootstrap", search = "all",
+     ncores = 8, fast_gam = FALSE)
+```
+
+- Method reference updated to the published version: Polinelli, Vinciotti & Wit
+  (2026), *Journal of Causal Inference* 14(1), 20240043.
 
 ### v0.2.0 — C++ acceleration via Rcpp (March 2026)
 
@@ -202,15 +252,9 @@ The underlying method is described in:
   restore pure-R behavior. `cgam()` is unaffected (always uses R/mgcv).
 - Achieves 1.4--8.7× speedups depending on scenario (see benchmark table above).
 
-**Benchmark and report**
+**Benchmark**
 
 - Added `simulations/benchmark.R` with 7 scenarios comparing C++ vs R.
-- Added `simulations/benchmark_report.tex` / `.pdf` (3-page LaTeX report).
-
-**Reference fix**
-
-- Corrected Polinelli et al. citation from 2026 Journal of Causal Inference
-  to 2024 arXiv preprint.
 
 ### v0.1.2-fork — Refactored fork vs CRAN v0.1.2
 
@@ -272,7 +316,10 @@ efficiency while preserving the statistical method exactly.
 Core GLM fitting, Pearson statistic computation, and bootstrap resampling have
 been reimplemented in C++ via RcppArmadillo. The fast path activates
 automatically for `cglm()` with `"poisson"` or `"binomial"` families. Set
-`use_cpp = FALSE` to use the original pure-R implementation.
+`use_cpp = FALSE` to use the original pure-R implementation. The C++ path does
+**not** cover `cgam()` (GAMs are fit with R/mgcv); for fast GAM bootstrap
+searches use `fast_gam = TRUE` and `ncores` instead (see v0.2.1 in the
+changelog).
 
 Benchmark results (median wall-clock time, Apple Silicon ARM64, R 4.4.2):
 
@@ -285,8 +332,6 @@ Benchmark results (median wall-clock time, Apple Silicon ARM64, R 4.4.2):
 | Binomial, boot B=50, all, p=5, n=3,000 | 6,538.0 | 916.2 | 7.1× |
 | Binomial, boot B=50, step, p=5, n=3,000 | 3,007.7 | 441.8 | 6.8× |
 | Poisson, χ², all, p=3, n=10,000 | 80.3 | 25.3 | 3.2× |
-
-See `simulations/benchmark_report.pdf` for the full technical report.
 
 ## License
 

@@ -1,5 +1,5 @@
 boot_pval <- function(formula, family, data, B = 100, use_gam = FALSE,
-                      ncores = 1L, use_cpp = TRUE, ...) {
+                      ncores = 1L, use_cpp = TRUE, sp = NULL, ...) {
   # Fast C++ path for GLM with supported families
   if (use_cpp && !use_gam && family %in% c("poisson", "binomial") &&
       length(list(...)) == 0) {
@@ -13,11 +13,15 @@ boot_pval <- function(formula, family, data, B = 100, use_gam = FALSE,
   n <- nrow(data)
   dots <- list(...)
 
+  # When sp is supplied (GAM fast path), reuse the original-data smoothing
+  # parameters on every resample so mgcv skips the costly REML/GCV selection.
+  gam_sp <- if (use_gam && !is.null(sp)) list(sp = sp) else list()
+
   boot_one <- function(i) {
     idx <- sample.int(n, replace = TRUE)
     h <- do.call(.fit_model, c(list(formula = formula, family = family,
                                     data = data[idx, , drop = FALSE],
-                                    use_gam = use_gam), dots))
+                                    use_gam = use_gam), gam_sp, dots))
     sum(residuals(h, type = "pearson")^2) / n
   }
 

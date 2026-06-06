@@ -90,6 +90,5 @@ mod.step$model.opt
 }
 }
 \references{
-Polinelli, A., V. Vinciotti and E.C. Wit. (2026). "Causal generalized linear models via Pearson risk invariance" *Journal of Causal
-Inference*.
+Polinelli, A., V. Vinciotti and E.C. Wit. (2026). "Causal generalized linear models via Pearson risk invariance." \emph{Journal of Causal Inference}, 14(1), 20240043. \doi{10.1515/jci-2024-0043}
 }

@@ -13,6 +13,7 @@ cgam(
   B = 100,
   search = c("all", "stepwise"),
   ncores = 1L,
+  fast_gam = TRUE,
   ...
 )
 }
@@ -32,6 +33,8 @@ cgam(
 \item{search}{If search="stepwise", a greedy forward stepwise search is conducted. Default is search="all", in which case all possible submodels are considered.}
 
 \item{ncores}{Number of cores for parallel computation. Default is 1 (sequential). When ncores > 1, model evaluations are distributed across cores using \code{parallel::mclapply} (Unix/macOS). On Windows, parallelization is not supported and this parameter is ignored.}
+
+\item{fast_gam}{Logical; only relevant when pval="bootstrap". If TRUE, the smoothing parameters selected on the original data (once per candidate model) are held fixed across that model's bootstrap resamples, so each resample fit skips mgcv's REML/GCV smoothing-parameter selection. This typically gives a 3-4x speedup (composable with ncores) and the same model selection, but it is an approximation: individual bootstrap p-values can differ from the fully re-selected version, more so at small B. Default is TRUE; set fast_gam=FALSE to re-select the smoothing parameters on every resample (the exact bootstrap used in earlier versions, slower). Has no effect on cglm or on the chi-square test.}
 
 \item{...}{Further arguments to be passed to the gam function.}
 }
@@ -92,6 +95,5 @@ cm_step$model.opt
 }
 }
 \references{
-Polinelli, A., V. Vinciotti and E.C. Wit. (2026). "Causal generalized linear models via Pearson risk invariance" *Journal of Causal
-Inference*.
+Polinelli, A., V. Vinciotti and E.C. Wit. (2026). "Causal generalized linear models via Pearson risk invariance." \emph{Journal of Causal Inference}, 14(1), 20240043. \doi{10.1515/jci-2024-0043}
 }

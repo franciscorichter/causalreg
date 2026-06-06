@@ -2,7 +2,7 @@
 causal_step <- function(formula, family, data, alpha = 0.05,
                         pval = "bootstrap", B = 100,
                         use_gam = FALSE, ncores = 1L,
-                        use_cpp = TRUE, ...) {
+                        use_cpp = TRUE, fast_gam = FALSE, ...) {
   n <- nrow(data)
   vrs <- all.vars(formula)
   dip_name <- as.character(formula[[2]])
@@ -56,7 +56,8 @@ causal_step <- function(formula, family, data, alpha = 0.05,
         do.call(.fit_and_test, c(list(formula = fmli, family = family,
                                       data = data, n = n, pval_method = pval_method,
                                       B = B, use_gam = effective_gam,
-                                      ncores = 1L, use_cpp = use_cpp), dots))
+                                      ncores = 1L, use_cpp = use_cpp,
+                                      fast_gam = fast_gam), dots))
       }
       cand_results <- parallel::mclapply(seq_len(n_cand), eval_cand,
                                           mc.cores = ncores, mc.set.seed = TRUE)
@@ -69,7 +70,8 @@ causal_step <- function(formula, family, data, alpha = 0.05,
                                                 data = data, n = n,
                                                 pval_method = pval_method,
                                                 B = B, use_gam = effective_gam,
-                                                ncores = 1L, use_cpp = use_cpp), dots))
+                                                ncores = 1L, use_cpp = use_cpp,
+                                                fast_gam = fast_gam), dots))
         pvals[i] <- result$pval
       }
     }
@@ -141,7 +143,7 @@ causal_step <- function(formula, family, data, alpha = 0.05,
   mod_opt_str <- deparse1(mod_step[[step_count]])
   new_opt_str <- .handle_categorical_step(mod_opt_str, family, data, alpha, n, dip_name,
                                           pval_method, B, effective_gam,
-                                          ncores = ncores, ...)
+                                          ncores = ncores, fast_gam = fast_gam, ...)
 
   if (new_opt_str != mod_opt_str) {
     step_count <- step_count + 1L

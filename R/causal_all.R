@@ -2,7 +2,7 @@
 causal_all <- function(formula, family, data, alpha = 0.05,
                        pval = "bootstrap", B = 100,
                        use_gam = FALSE, ncores = 1L,
-                       use_cpp = TRUE, ...) {
+                       use_cpp = TRUE, fast_gam = FALSE, ...) {
   n <- nrow(data)
   vrs <- all.vars(formula)
   dip_name <- as.character(formula[[2]])
@@ -51,7 +51,8 @@ causal_all <- function(formula, family, data, alpha = 0.05,
       do.call(.fit_and_test, c(list(formula = mod_all[[j]], family = family,
                                     data = data, n = n, pval_method = pval,
                                     B = B, use_gam = effective_gam,
-                                    ncores = 1L, use_cpp = use_cpp), dots))
+                                    ncores = 1L, use_cpp = use_cpp,
+                                    fast_gam = fast_gam), dots))
     }
     all_results <- parallel::mclapply(seq_len(n_models), eval_model,
                                       mc.cores = ncores, mc.set.seed = TRUE)
@@ -63,7 +64,8 @@ causal_all <- function(formula, family, data, alpha = 0.05,
   } else {
     for (j in seq_len(n_models)) {
       result <- .fit_and_test(mod_all[[j]], family, data, n, pval, B,
-                              effective_gam, ncores = 1L, use_cpp = use_cpp, ...)
+                              effective_gam, ncores = 1L, use_cpp = use_cpp,
+                              fast_gam = fast_gam, ...)
       pearson_all[j] <- result$pearson
       pv_all[j] <- result$pval
       bic_all[j] <- result$bic

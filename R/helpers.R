@@ -28,7 +28,8 @@
 # Fit model and compute Pearson risk, p-value, and BIC
 # ncores is passed to boot_pval for bootstrap parallelization
 .fit_and_test <- function(formula, family, data, n, pval_method, B,
-                          use_gam, ncores = 1L, use_cpp = TRUE, ...) {
+                          use_gam, ncores = 1L, use_cpp = TRUE,
+                          fast_gam = FALSE, ...) {
   # Fast C++ path for GLM with supported families
   if (use_cpp && !use_gam && family %in% c("poisson", "binomial") &&
       length(list(...)) == 0) {
@@ -60,8 +61,10 @@
   if (pval_method == "chi-square") {
     pv <- .pearson_chisq_pval(ps, n - edf)
   } else {
+    sp_fixed <- if (use_gam && fast_gam) fit$sp else NULL
     pv <- boot_pval(formula, family = family, data = data, B = B,
-                    use_gam = use_gam, ncores = ncores, use_cpp = use_cpp, ...)
+                    use_gam = use_gam, ncores = ncores, use_cpp = use_cpp,
+                    sp = sp_fixed, ...)
   }
 
   list(pearson = ps / n, pval = pv, bic = bic_val)
@@ -119,7 +122,8 @@
 # Handle categorical variable post-processing for binomial family (stepwise search)
 # Fits models and computes p-values directly
 .handle_categorical_step <- function(mod_opt, family, data, alpha, n, response_name,
-                                     pval_method, B, use_gam, ncores = 1L, ...) {
+                                     pval_method, B, use_gam, ncores = 1L,
+                                     fast_gam = FALSE, ...) {
   if (family != "binomial") return(mod_opt)
 
   var_cat <- .find_categorical(data)
@@ -133,7 +137,7 @@
     mod_test <- reformulate(var_noncat, response = response_name)
     fmli <- update.formula(as.formula(mod_opt), mod_test)
     result <- .fit_and_test(fmli, family, data, n, pval_method, B, use_gam,
-                            ncores = ncores, ...)
+                            ncores = ncores, fast_gam = fast_gam, ...)
     if (result$pval > alpha) return(deparse1(fmli))
   }
 
@@ -142,7 +146,7 @@
   for (i in seq_along(varc)) {
     fmli <- update.formula(as.formula(mod_opt), paste0("~. -", varc[i]))
     result <- .fit_and_test(fmli, family, data, n, pval_method, B, use_gam,
-                            ncores = ncores, ...)
+                            ncores = ncores, fast_gam = fast_gam, ...)
     if (result$pval > alpha) {
       mod_opt <- deparse1(fmli)
     }

@@ -13,7 +13,7 @@
 #' @param ... Further arguments to be passed to the glm function.
 #' @return A list containing the selected causal submodel and search diagnostics.
 #' @references
-#' Polinelli, A., V. Vinciotti and E.C. Wit. (2024). "Causal generalized linear models via Pearson risk invariance" *arXiv preprint*.
+#' Polinelli, A., V. Vinciotti and E.C. Wit. (2026). "Causal generalized linear models via Pearson risk invariance." Journal of Causal Inference, 14(1), 20240043. \doi{10.1515/jci-2024-0043}
 #' @importFrom stats BIC as.formula coef glm pchisq reformulate residuals terms.formula update.formula na.omit
 #' @importFrom utils combn
 #' @examples
