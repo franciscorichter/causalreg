@@ -126,31 +126,36 @@ Both functions share the same interface:
 
 ## How it works
 
-The method rests on a population-level identity. For a response Y and a set of
-candidate parents **X**, the **Pearson risk** is the expected squared Pearson
-residual
+The method rests on a population-level identity. For a response $Y$ and a set of
+candidate parents $\mathbf{X}$, the **Pearson risk** is the expected squared
+Pearson residual
 
-R_P = E[ (Y − μ(**X**))² / V(μ(**X**)) ]
+$$R_P = \mathbb{E}\!\left[\frac{\bigl(Y - \mu(\mathbf{X})\bigr)^2}{V\bigl(\mu(\mathbf{X})\bigr)}\right],$$
 
-where μ(**X**) is the conditional mean and V(·) is the family's variance
-function. When the model is correctly specified with respect to the true causal
-parents, the conditional variance of Y equals V(μ(**X**)), so each squared
-Pearson residual has expectation 1 and therefore
+where $\mu(\mathbf{X})$ is the conditional mean and $V(\cdot)$ is the family's
+variance function. When the model is correctly specified with respect to the
+true causal parents, the conditional variance of $Y$ equals $V(\mu(\mathbf{X}))$,
+so each squared Pearson residual has expectation 1 and therefore
 
-R_P = 1   (exactly, for the causal model).
+$$R_P = 1 \qquad \text{(exactly, for the causal model).}$$
 
 If the model includes non-causal variables or omits causal ones, the mean or
-variance structure is misspecified and R_P ≠ 1.
+variance structure is misspecified and $R_P \neq 1$.
 
-Empirically, R_P is estimated by the average of the squared Pearson residuals,
-(1/n) · Σ r̂ᵢ², and for each candidate subset the algorithm performs a
-statistical test of the null hypothesis H₀: R_P = 1 using either:
+Empirically, $R_P$ is estimated by the average of the squared Pearson residuals,
+
+$$\widehat{R}_P = \frac{1}{n}\sum_{i=1}^{n} \widehat{r}_i^{\,2},
+\qquad
+\widehat{r}_i = \frac{Y_i - \widehat{\mu}(\mathbf{X}_i)}{\sqrt{V\bigl(\widehat{\mu}(\mathbf{X}_i)\bigr)}},$$
+
+and for each candidate subset the algorithm performs a statistical test of the
+null hypothesis $H_0\colon R_P = 1$ using either:
 
 - A **chi-square test** (fast, asymptotically valid for Poisson models), or
 - A **bootstrap test** (general, works for any family including binomial).
 
-Among all subsets that pass the test (p-value > alpha), the one with the
-lowest BIC is selected.
+Among all subsets that pass the test ($p > \alpha$), the one with the lowest BIC
+is selected.
 
 ## Choosing between search strategies
 
