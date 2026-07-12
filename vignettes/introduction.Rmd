@@ -23,8 +23,8 @@ identifies which covariates are causal parents of the response within a
 structural causal model.
 
 The key idea: if a GLM or GAM is correctly specified with respect to the
-true causal parents, the **Pearson risk** (average squared Pearson residual)
-converges to 1. The package tests this property across subsets of covariates to
+true causal parents, the **Pearson risk** (expected squared Pearson residuals)
+is equal to 1. The package performs this test from observational data across subsets of covariates to
 find the causal model.
 
 ## Causal Poisson regression
@@ -60,7 +60,7 @@ We can inspect the full results:
 # All models considered
 unlist(result$models)
 
-# Their p-values (higher = more consistent with Pearson risk = 1)
+# Their p-values (acceptance means no evidence to reject Pearson risk = 1)
 result$pv
 
 # Their BIC values
@@ -86,7 +86,7 @@ unlist(result_step$models)
 
 The stepwise search starts with an intercept-only model, then greedily adds
 the variable that maximizes the Pearson risk p-value. After the forward
-phase, it performs backward elimination based on BIC.
+stepwise phase, it performs backward elimination based on BIC as the selected models may contain non-predictive variables, i.e., variables with zero causal effect.
 
 ## Causal logistic regression
 
@@ -107,8 +107,7 @@ result <- cglm(Y ~ X1 + X2, "binomial", data, pval = "bootstrap", search = "all"
 result$model.opt
 ```
 
-The bootstrap test correctly identifies the causal model despite the
-binomial response.
+The bootstrap test correctly identifies the causal model.
 
 ## Causal GAMs for nonlinear relationships
 
