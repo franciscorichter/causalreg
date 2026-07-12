@@ -206,10 +206,9 @@ binomial data took roughly **43 minutes**.
 
 - **New `fast_gam` argument in `cgam()`** (default `TRUE`). When enabled, the
   smoothing parameters chosen on the original data — once per candidate model —
-  are held fixed across that model's bootstrap resamples, so each resample fit is
+  are held fixed across that model's bootstrap resamples, so the fit on each resample is
   a single penalized IRLS rather than a full smoothing-parameter search. This is
-  therefore an approximation, but it produced the **same model
-  selection** in all validation runs. Because it is now the default, GAM
+  therefore an approximation, which worked well on a number validation runs. It could be taken as a first approach to select a number of potentially interesting models to then test further. Because it is now the default, GAM
   bootstrap results differ slightly from v0.2.0. The old results can be obtained by setting `fast_gam = FALSE`.
 - **`ncores` now matters for GAM too.** Model evaluations parallelize across
   cores via `parallel::mclapply`.
