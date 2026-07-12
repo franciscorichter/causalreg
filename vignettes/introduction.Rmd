@@ -163,8 +163,7 @@ mod_step$model.opt
 ```
 
 Both search strategies correctly identify `X2` and `X3` as the causal
-parents of `Y`, despite the presence of correlated (X1, X4) and
-confounded (X5) variables.
+parents of `Y`.
 
 ## Summary of recommendations
 
