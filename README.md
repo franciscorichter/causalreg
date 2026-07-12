@@ -130,7 +130,7 @@ The method rests on a population-level identity. For a response $Y$ and a set of
 candidate parents $\mathbf{X}$, the **Pearson risk** is the expected squared
 Pearson residual
 
-$$R_P = \mathbb{E}\!\left[\frac{\bigl(Y - \mu(\mathbf{X})\bigr)^2}{V\bigl(\mu(\mathbf{X})\bigr)}\right],$$
+$$R_P = \mathbb{E}\left[\frac{\bigl(Y - \mu(\mathbf{X})\bigr)^2}{V\bigl(\mu(\mathbf{X})\bigr)}\right],$$
 
 where $\mu(\mathbf{X})$ is the conditional mean and $V(\cdot)$ is the family's
 variance function. When the model is correctly specified with respect to the
