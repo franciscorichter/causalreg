@@ -11,7 +11,7 @@ models (GAMs) via **Pearson risk invariance**.
 Given a response variable and a set of candidate covariates, `causalreg`
 identifies the subset of covariates that are causal parents of the response
 within a structural causal model. The key idea is that the Pearson risk
-(expected sum of squared Pearson residuals divided by the sample size) equals 1
+(expectation of squared Pearson residuals) equals 1
 if and only if the model is correctly specified with respect to its causal
 parents.
 
@@ -170,8 +170,8 @@ is selected.
 - **`pval = "chi-square"`**: Uses the chi-square distribution of the Pearson
   statistic. Fast and appropriate for Poisson models.
 - **`pval = "bootstrap"`**: Nonparametric bootstrap test. Required for
-  binomial models and generally more robust. Controlled by the `B` parameter
-  (more bootstrap samples = more precise but slower).
+  most  glm models and generally more robust. Controlled by the `B` parameter
+  (the more bootstrap samples the better, but slower).
 
 ## Citation
 
@@ -208,14 +208,11 @@ binomial data took roughly **43 minutes**.
   smoothing parameters chosen on the original data — once per candidate model —
   are held fixed across that model's bootstrap resamples, so each resample fit is
   a single penalized IRLS rather than a full smoothing-parameter search. This is
-  an approximation of the fully re-selected bootstrap (individual bootstrap
-  p-values can shift, more so at small `B`), but it produced the **same model
+  therefore an approximation, but it produced the **same model
   selection** in all validation runs. Because it is now the default, GAM
-  bootstrap results differ slightly from v0.2.0 — pass `fast_gam = FALSE` to
-  recover the exact (re-selected) bootstrap.
+  bootstrap results differ slightly from v0.2.0. The old results can be obtained by setting `fast_gam = FALSE`.
 - **`ncores` now matters for GAM too.** Model evaluations parallelize across
-  cores via `parallel::mclapply` — this is exact (no approximation). The two
-  levers compose.
+  cores via `parallel::mclapply`.
 
 Timings on the `n = 5000`, 5-covariate, `B = 100` example (Apple M1 Max);
 all three configurations select the same model `Y ~ s(X2) + s(X3) + s(X5)`:
