@@ -13,6 +13,7 @@ cglm(
   B = 100,
   search = c("all", "stepwise"),
   ncores = 1L,
+  use_cpp = TRUE,
   ...
 )
 }
@@ -31,7 +32,9 @@ cglm(
 
 \item{search}{If search="stepwise", a greedy forward stepwise search is conducted. Default is search="all", in which case all possible submodels are considered.}
 
-\item{ncores}{Number of cores for parallel computation. Default is 1 (sequential). When ncores > 1, model evaluations are distributed across cores using \code{parallel::mclapply} (Unix/macOS). On Windows, parallelization is not supported and this parameter is ignored.}
+\item{ncores}{Number of cores for parallel computation. Default is 1 (sequential). When ncores > 1, model evaluations are distributed across cores using forking (\code{parallel::mclapply}) on Unix/macOS and a PSOCK cluster (\code{parallel::parLapply}) on Windows, so parallelization is available on all platforms. The backend can be overridden with \code{options(causalreg.parallel = )} ("auto", "fork", "psock", or "sequential").}
+
+\item{use_cpp}{Logical; if TRUE (default), use fast C++ implementations for supported families.}
 
 \item{...}{Further arguments to be passed to the glm function.}
 }
@@ -90,5 +93,5 @@ mod.step$model.opt
 }
 }
 \references{
-Polinelli, A., V. Vinciotti and E.C. Wit. (2026). "Causal generalized linear models via Pearson risk invariance." \emph{Journal of Causal Inference}, 14(1), 20240043. \doi{10.1515/jci-2024-0043}
+Polinelli, A., V. Vinciotti and E.C. Wit. (2026). "Causal generalized linear models via Pearson risk invariance." Journal of Causal Inference, 14(1), 20240043. \doi{10.1515/jci-2024-0043}
 }

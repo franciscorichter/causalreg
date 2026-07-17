@@ -59,8 +59,7 @@ causal_step <- function(formula, family, data, alpha = 0.05,
                                       ncores = 1L, use_cpp = use_cpp,
                                       fast_gam = fast_gam), dots))
       }
-      cand_results <- parallel::mclapply(seq_len(n_cand), eval_cand,
-                                          mc.cores = ncores, mc.set.seed = TRUE)
+      cand_results <- .parallel_lapply(seq_len(n_cand), eval_cand, ncores)
       pvals <- vapply(cand_results, function(r) r$pval, numeric(1))
     } else {
       pvals <- numeric(n_cand)
@@ -111,8 +110,7 @@ causal_step <- function(formula, family, data, alpha = 0.05,
                                                      data = data, use_gam = effective_gam),
                                                 dots))))
       }
-      bics <- unlist(parallel::mclapply(seq_len(n_vars), eval_drop,
-                                         mc.cores = ncores))
+      bics <- unlist(.parallel_lapply(seq_len(n_vars), eval_drop, ncores))
     } else {
       bics <- numeric(n_vars)
       for (i in seq_len(n_vars)) {

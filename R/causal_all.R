@@ -54,8 +54,7 @@ causal_all <- function(formula, family, data, alpha = 0.05,
                                     ncores = 1L, use_cpp = use_cpp,
                                     fast_gam = fast_gam), dots))
     }
-    all_results <- parallel::mclapply(seq_len(n_models), eval_model,
-                                      mc.cores = ncores, mc.set.seed = TRUE)
+    all_results <- .parallel_lapply(seq_len(n_models), eval_model, ncores)
     for (j in seq_len(n_models)) {
       pearson_all[j] <- all_results[[j]]$pearson
       pv_all[j] <- all_results[[j]]$pval

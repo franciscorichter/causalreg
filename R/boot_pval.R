@@ -26,8 +26,7 @@ boot_pval <- function(formula, family, data, B = 100, use_gam = FALSE,
   }
 
   if (ncores > 1L) {
-    pr <- unlist(parallel::mclapply(seq_len(B), boot_one,
-                                   mc.cores = ncores, mc.set.seed = TRUE))
+    pr <- unlist(.parallel_lapply(seq_len(B), boot_one, ncores))
   } else {
     pr <- vapply(seq_len(B), boot_one, numeric(1))
   }
