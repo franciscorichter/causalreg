@@ -20,8 +20,12 @@ parents.
 Install the development version from GitHub:
 
 ```r
-# install.packages("devtools")
-devtools::install_github("franciscorichter/causalreg")
+# install.packages("pak")
+pak::pak("franciscorichter/causalreg")
+
+# or, equivalently:
+# install.packages("remotes")
+# remotes::install_github("franciscorichter/causalreg")
 ```
 
 Or install from CRAN:
@@ -211,7 +215,10 @@ binomial data took roughly **43 minutes**.
   therefore an approximation, which worked well on a number validation runs. It could be taken as a first approach to select a number of potentially interesting models to then test further. Because it is now the default, GAM
   bootstrap results differ slightly from v0.2.0. The old results can be obtained by setting `fast_gam = FALSE`.
 - **`ncores` now matters for GAM too.** Model evaluations parallelize across
-  cores via `parallel::mclapply`.
+  cores on all platforms: forking (`parallel::mclapply`) on Unix/macOS and a
+  PSOCK cluster (`parallel::parLapply`) on Windows. The backend can be selected
+  with `options(causalreg.parallel = )` (`"auto"`, `"fork"`, `"psock"`,
+  `"sequential"`).
 
 Timings on the `n = 5000`, 5-covariate, `B = 100` example (Apple M1 Max);
 all three configurations select the same model `Y ~ s(X2) + s(X3) + s(X5)`:

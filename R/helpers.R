@@ -1,6 +1,48 @@
 # Internal helper functions for causalreg
 # These are not exported and are used by causal_all() and causal_step()
 
+# Cross-platform parallel lapply used by the model-search functions.
+#
+# The backend is chosen by getOption("causalreg.parallel"):
+#   "auto"       (default) forking on Unix/macOS, PSOCK cluster on Windows
+#   "fork"       force forking (parallel::mclapply)
+#   "psock"      force a PSOCK cluster (portable; also used to test the
+#                Windows path on Unix)
+#   "sequential" no parallelism
+# Forking is unavailable on Windows, so "auto"/"fork" fall back to PSOCK there.
+# With ncores <= 1 the call is sequential regardless of backend.
+.parallel_lapply <- function(X, FUN, ncores = 1L) {
+  ncores <- as.integer(ncores)
+  backend <- match.arg(getOption("causalreg.parallel", "auto"),
+                       c("auto", "fork", "psock", "sequential"))
+
+  can_fork <- .Platform$OS.type != "windows"
+  use_fork <- (backend == "fork" || backend == "auto") && can_fork
+
+  if (ncores <= 1L || backend == "sequential") {
+    return(lapply(X, FUN))
+  }
+
+  if (use_fork) {
+    return(parallel::mclapply(X, FUN, mc.cores = ncores, mc.set.seed = TRUE))
+  }
+
+  # PSOCK cluster: portable path (the default on Windows).
+  cl <- parallel::makePSOCKcluster(ncores)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
+  # Workers must see the same library paths (e.g. the temporary lib used
+  # during R CMD check) and load the package so internal helpers and the
+  # compiled code resolve when the serialised closures are evaluated.
+  parallel::clusterCall(cl, function(paths) .libPaths(paths), .libPaths())
+  parallel::clusterEvalQ(cl, {
+    loadNamespace("causalreg")
+    loadNamespace("mgcv")
+  })
+  # Parallel-safe, reproducible RNG streams across workers.
+  parallel::clusterSetRNGStream(cl)
+  parallel::parLapply(cl, X, FUN)
+}
+
 # Fit a model using glm or gam
 .fit_model <- function(formula, family, data, use_gam, ...) {
   if (use_gam) {
