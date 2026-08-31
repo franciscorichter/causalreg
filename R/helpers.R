@@ -119,8 +119,10 @@
   union(var_cat, var_bin)
 }
 
-# Handle categorical variable post-processing for binomial family (exhaustive search)
-# Uses pre-computed p-values from the full model list
+# Categorical post-processing for binomial family (exhaustive search).
+# If the selected model contains a single categorical variable and nothing
+# else, its Pearson risk equals 1 by construction, so the invariance test
+# carries no information: warn the user and return the model unchanged.
 .handle_categorical_all <- function(mod_opt, family, data, alpha,
                                     response_name, mod_all, pv_all) {
   if (mod_opt == "no potential causal model found") return(mod_opt)
@@ -130,33 +132,10 @@
   var_mod <- attr(terms.formula(as.formula(mod_opt), data = data), "term.labels")
   var_noncat <- setdiff(var_mod, var_cat)
 
-  if (length(var_noncat) >= length(var_mod)) return(mod_opt)
-
-  # Pre-compute deparsed model strings for matching
-  mod_strs <- vapply(mod_all, deparse1, character(1))
-
-  # Try model without all categorical variables
-  if (length(var_noncat) > 0) {
-    mod_test <- reformulate(var_noncat, response = response_name)
-    fmli <- update.formula(as.formula(mod_opt), mod_test)
-    fmli_str <- deparse1(fmli)
-    match_idx <- which(mod_strs == fmli_str)
-
-    if (length(match_idx) > 0 && pv_all[match_idx[1]] > alpha) {
-      return(fmli_str)
-    }
-  }
-
-  # Try removing categorical variables one at a time
-  varc <- var_cat[var_cat %in% var_mod]
-  for (i in seq_along(varc)) {
-    fmli <- update.formula(as.formula(mod_opt), paste0("~. -", varc[i]))
-    fmli_str <- deparse1(fmli)
-    match_idx <- which(mod_strs == fmli_str)
-    if (length(match_idx) > 0 && pv_all[match_idx[1]] > alpha) {
-      mod_opt <- fmli_str
-    }
-  }
+  if (length(var_noncat) == 0 && length(var_mod) == 1)
+    message("The model found contains only one categorical variable. ",
+            "Since the Pearson risk of this model is mathematically equal to 1, ",
+            "the test is inconclusive.")
 
   mod_opt
 }
