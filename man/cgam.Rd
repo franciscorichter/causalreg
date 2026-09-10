@@ -14,6 +14,7 @@ cgam(
   search = c("all", "stepwise"),
   ncores = 1L,
   fast_gam = TRUE,
+  direction = c("forward", "backward"),
   ...
 )
 }
@@ -35,6 +36,15 @@ cgam(
 \item{ncores}{Number of cores for parallel computation. Default is 1 (sequential). When ncores > 1, model evaluations are distributed across cores using forking (\code{parallel::mclapply}) on Unix/macOS and a PSOCK cluster (\code{parallel::parLapply}) on Windows, so parallelization is available on all platforms. The backend can be overridden with \code{options(causalreg.parallel = )} ("auto", "fork", "psock", or "sequential").}
 
 \item{fast_gam}{Logical; only relevant when pval="bootstrap". If TRUE, the smoothing parameters selected on the original data (once per candidate model) are held fixed across that model's bootstrap resamples, so each resample fit skips mgcv's REML/GCV smoothing-parameter selection. This typically gives a 3-4x speedup (composable with ncores) and the same model selection, but it is an approximation: individual bootstrap p-values can differ from the fully re-selected version, more so at small B. Default is TRUE; set fast_gam=FALSE to re-select the smoothing parameters on every resample (the exact bootstrap used in earlier versions, slower). Has no effect on cglm or on the chi-square test.}
+
+\item{direction}{Direction of the stepwise search, `"forward"` (default) or
+`"backward"`. Ignored when `search = "all"`. Forward starts from the intercept
+model and adds the variable giving the largest p-value; backward starts from the
+full model and removes the variable whose removal gives the largest p-value,
+stopping once the model is no longer rejected. Both then prune by BIC. For a
+binomial response whose candidate set contains a categorical variable, the
+backward search is used and a message is emitted, because the Pearson risk of a
+binary regression on categorical covariates alone is mathematically equal to 1.}
 
 \item{...}{Further arguments to be passed to the gam function.}
 }

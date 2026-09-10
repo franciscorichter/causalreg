@@ -18,6 +18,14 @@
 #' @importFrom stats BIC as.formula coef glm pchisq reformulate residuals terms.formula update.formula na.omit
 #' @importFrom utils combn
 #' @importFrom mgcv gam
+#' @param direction Direction of the stepwise search, `"forward"` (default) or
+#'   `"backward"`. Ignored when `search = "all"`. Forward starts from the intercept
+#'   model and adds the variable giving the largest p-value; backward starts from the
+#'   full model and removes the variable whose removal gives the largest p-value,
+#'   stopping once the model is no longer rejected. Both then prune by BIC. For a
+#'   binomial response whose candidate set contains a categorical variable, the
+#'   backward search is used and a message is emitted, because the Pearson risk of a
+#'   binary regression on categorical covariates alone is mathematically equal to 1.
 #' @examples
 #' ##############################
 #' #causal Poisson gam##########
@@ -71,9 +79,10 @@
 cgam <- function(formula, family, data, alpha = 0.05,
                  pval = c("bootstrap", "chi-square"), B = 100,
                  search = c("all", "stepwise"), ncores = 1L,
-                 fast_gam = TRUE, ...) {
+                 fast_gam = TRUE, direction = c("forward", "backward"), ...) {
   pval <- match.arg(pval)
   search <- match.arg(search)
+  direction <- match.arg(direction)
 
   if (search == "all") {
     causal_all(formula, family = family, data = data, alpha = alpha,
@@ -82,6 +91,6 @@ cgam <- function(formula, family, data, alpha = 0.05,
   } else {
     causal_step(formula, family = family, data = data, alpha = alpha,
                 pval = pval, B = B, use_gam = TRUE, ncores = ncores,
-                fast_gam = fast_gam, ...)
+                fast_gam = fast_gam, direction = direction, ...)
   }
 }

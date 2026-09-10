@@ -2,7 +2,9 @@
 causal_step <- function(formula, family, data, alpha = 0.05,
                         pval = "bootstrap", B = 100,
                         use_gam = FALSE, ncores = 1L,
-                        use_cpp = TRUE, fast_gam = FALSE, ...) {
+                        use_cpp = TRUE, fast_gam = FALSE,
+                        direction = c("forward", "backward"), ...) {
+  direction <- match.arg(direction)
   n <- nrow(data)
   vrs <- all.vars(formula)
   dip_name <- as.character(formula[[2]])
@@ -16,6 +18,23 @@ causal_step <- function(formula, family, data, alpha = 0.05,
 
   # Use GAM only when formula has explicit terms (not ".")
   effective_gam <- use_gam && (vrs[2] != ".")
+
+  # A binary regression on categorical covariates alone has a Pearson risk of
+  # exactly one, so the test cannot discriminate among such models and a forward
+  # search can enter a categorical term at the first step and stop there. Search
+  # backward instead whenever the candidate set holds one.
+  if (family == "binomial" && direction == "forward") {
+    cat_candidates <- intersect(var_names, .find_categorical(data))
+    if (length(cat_candidates) > 0) {
+      message("The candidate set contains the categorical variable(s) ",
+              paste(cat_candidates, collapse = ", "),
+              ". Since the Pearson risk of a binary regression on categorical ",
+              "covariates alone is mathematically equal to 1, the forward ",
+              "search can stop at one of them. Running the backward search ",
+              "instead.")
+      direction <- "backward"
+    }
+  }
 
   # Detect intercept from full model
   full_fit <- .fit_model(formula, family, data, effective_gam, ...)
@@ -44,8 +63,57 @@ causal_step <- function(formula, family, data, alpha = 0.05,
   continue <- TRUE
   dots <- list(...)
 
+  # === Backward phase ===
+  # Start from the full model and drop, at each step, the variable whose removal
+  # leaves the model most compatible with a Pearson risk of one. That mirrors the
+  # forward rule, which adds the variable giving the largest p-value. Stop as
+  # soon as the current model is no longer rejected.
+  if (direction == "backward" && p > 0) {
+    model_back <- reformulate(sort(var_names), response = dip_name,
+                              intercept = intercept)
+    step_count <- 1L
+    mod_step[[1]] <- model_back
+    var_in_model <- var_names
+    var_available <- character(0)
+
+    res_full <- do.call(.fit_and_test,
+                        c(list(formula = model_back, family = family, data = data,
+                               n = n, pval_method = pval_method, B = B,
+                               use_gam = effective_gam, ncores = 1L,
+                               use_cpp = use_cpp, fast_gam = fast_gam), dots))
+    pv_step[1] <- res_full$pval
+
+    while (pv_step[step_count] <= alpha && length(var_in_model) > 1L) {
+      n_vars <- length(var_in_model)
+      model_current <- mod_step[[step_count]]
+
+      eval_drop <- function(i) {
+        fmli <- update.formula(model_current, paste0("~. -", var_in_model[i]))
+        do.call(.fit_and_test,
+                c(list(formula = fmli, family = family, data = data, n = n,
+                       pval_method = pval_method, B = B, use_gam = effective_gam,
+                       ncores = 1L, use_cpp = use_cpp, fast_gam = fast_gam), dots))
+      }
+      drop_results <- .parallel_lapply(seq_len(n_vars), eval_drop, ncores)
+      pvals <- vapply(drop_results, function(r) r$pval, numeric(1))
+
+      i_drop <- which.max(pvals)
+      mod_new <- update.formula(model_current, paste0("~. -", var_in_model[i_drop]))
+      term_labels <- attr(terms.formula(mod_new), "term.labels")
+      mod_new <- reformulate(sort(term_labels), response = dip_name,
+                             intercept = intercept)
+
+      step_count <- step_count + 1L
+      mod_step[[step_count]] <- mod_new
+      pv_step[step_count] <- pvals[i_drop]
+      var_in_model <- var_in_model[-i_drop]
+    }
+
+    continue <- FALSE
+  }
+
   # === Forward phase ===
-  while (continue && length(var_available) > 0) {
+  while (direction == "forward" && continue && length(var_available) > 0) {
     n_cand <- length(var_available)
     current_mod <- mod_step[[step_count]]
 
