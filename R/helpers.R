@@ -173,5 +173,14 @@
     }
   }
 
+  # Same warning as the exhaustive search: a lone categorical covariate carries
+  # no information, because the Pearson risk of that model equals 1 by
+  # construction.
+  var_final <- attr(terms.formula(as.formula(mod_opt), data = data), "term.labels")
+  if (length(var_final) == 1L && length(setdiff(var_final, var_cat)) == 0L)
+    message("The model found contains only one categorical variable. ",
+            "Since the Pearson risk of this model is mathematically equal to 1, ",
+            "the test is inconclusive.")
+
   mod_opt
 }
