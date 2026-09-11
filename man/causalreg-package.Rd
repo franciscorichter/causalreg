@@ -22,6 +22,7 @@ Useful links:
 Authors:
 \itemize{
   \item Ernst C. Wit \email{ernst.jan.camiel.wit@usi.ch}
+  \item Francisco Richter \email{richtf@usi.ch}
 }
 
 }

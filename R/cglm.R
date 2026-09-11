@@ -16,6 +16,14 @@
 #' Polinelli, A., V. Vinciotti and E.C. Wit. (2026). "Causal generalized linear models via Pearson risk invariance." Journal of Causal Inference, 14(1), 20240043. \doi{10.1515/jci-2024-0043}
 #' @importFrom stats BIC as.formula coef glm pchisq reformulate residuals terms.formula update.formula na.omit
 #' @importFrom utils combn
+#' @param direction Direction of the stepwise search, `"forward"` (default) or
+#'   `"backward"`. Ignored when `search = "all"`. Forward starts from the intercept
+#'   model and adds the variable giving the largest p-value; backward starts from the
+#'   full model and removes the variable whose removal gives the largest p-value,
+#'   stopping once the model is no longer rejected. Both then prune by BIC. For a
+#'   binomial response whose candidate set contains a categorical variable, the
+#'   backward search is used and a message is emitted, because the Pearson risk of a
+#'   binary regression on categorical covariates alone is mathematically equal to 1.
 #' @examples
 #' ###################################
 #' #causal Poisson glm#################
@@ -68,9 +76,10 @@
 cglm <- function(formula, family, data, alpha = 0.05,
                  pval = c("bootstrap", "chi-square"), B = 100,
                  search = c("all", "stepwise"), ncores = 1L,
-                 use_cpp = TRUE, ...) {
+                 use_cpp = TRUE, direction = c("forward", "backward"), ...) {
   pval <- match.arg(pval)
   search <- match.arg(search)
+  direction <- match.arg(direction)
 
   if (search == "all") {
     causal_all(formula, family = family, data = data, alpha = alpha,
@@ -79,6 +88,6 @@ cglm <- function(formula, family, data, alpha = 0.05,
   } else {
     causal_step(formula, family = family, data = data, alpha = alpha,
                 pval = pval, B = B, use_gam = FALSE, ncores = ncores,
-                use_cpp = use_cpp, ...)
+                use_cpp = use_cpp, direction = direction, ...)
   }
 }
