@@ -157,3 +157,22 @@ test_that("direction is validated and ignored by the exhaustive search", {
   expect_silent(cglm(Y ~ X1, "poisson", data, pval = "chi-square",
                      search = "all", direction = "backward"))
 })
+
+test_that("backward stepwise reports the no-model outcome, as the exhaustive search does", {
+  # Overdispersed counts: no submodel has a Pearson risk compatible with one.
+  set.seed(4)
+  n <- 400
+  X1 <- rnorm(n)
+  X2 <- rnorm(n)
+  Y  <- rnbinom(n, mu = exp(0.5 * X1), size = 0.5)
+  data <- data.frame(X1, X2, Y)
+
+  all_fit <- cglm(Y ~ X1 + X2, "poisson", data, pval = "chi-square", search = "all")
+  bwd <- cglm(Y ~ X1 + X2, "poisson", data, pval = "chi-square",
+              search = "stepwise", direction = "backward")
+
+  expect_equal(all_fit$model.opt, "no potential causal model found")
+  expect_equal(bwd$model.opt, "no potential causal model found")
+  # the path it walked is still reported
+  expect_gt(length(bwd$models), 1L)
+})

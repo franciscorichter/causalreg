@@ -13,6 +13,9 @@
   stop there.
 * The stepwise search now emits the same "only one categorical variable"
   message that the exhaustive search already emitted.
+* The backward search reports `"no potential causal model found"` when no model
+  on its path was accepted, matching `search = "all"`. Previously it returned
+  the single-term model it happened to end on, which the test had rejected.
 
 # causalreg 0.2.2
 

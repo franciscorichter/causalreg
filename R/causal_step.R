@@ -61,6 +61,7 @@ causal_step <- function(formula, family, data, alpha = 0.05,
   var_in_model <- character(0)  # already in the model
 
   continue <- TRUE
+  backward_found <- TRUE
   dots <- list(...)
 
   # === Backward phase ===
@@ -109,6 +110,10 @@ causal_step <- function(formula, family, data, alpha = 0.05,
       var_in_model <- var_in_model[-i_drop]
     }
 
+    # The loop stops either because the model passed or because a single term is
+    # left and it still does not. In the second case no submodel on the path was
+    # accepted, so report that rather than return a model the test rejected.
+    backward_found <- pv_step[step_count] > alpha
     continue <- FALSE
   }
 
@@ -161,6 +166,13 @@ causal_step <- function(formula, family, data, alpha = 0.05,
       var_in_model <- c(var_in_model, var_available[i_best])
       var_available <- var_available[-i_best]
     }
+  }
+
+  if (!backward_found) {
+    mod_step <- mod_step[seq_len(step_count)]
+    models_str <- vapply(mod_step, deparse1, character(1))
+    return(list(models = as.list(models_str),
+                model.opt = "no potential causal model found"))
   }
 
   # === Backward BIC phase ===
