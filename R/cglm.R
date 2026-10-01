@@ -3,12 +3,12 @@
 #' This function does a search for a causal submodel within the generalized linear model provided.
 #'
 #' @param formula A formula object.
-#' @param family A distributional family object. Currently supported options are: binomial and poisson.
+#' @param family The response family as a character string, \code{"poisson"} or \code{"binomial"}. A family object such as \code{poisson()} is not accepted.
 #' @param data A data frame containing the variables in the model.
 #' @param alpha Significance level for statistical test
 #' @param pval If pval="bootstrap", a bootstrap test is conducted to test whether Pearson risk is 1. When family="poisson" a chi-squared test can be conducted by setting pval="chi-square".
 #' @param B Number of bootstrap samples when pval="bootstrap". Default is 100.
-#' @param search If search="stepwise", a greedy forward stepwise search is conducted. Default is search="all", in which case all possible submodels are considered.
+#' @param search \code{"all"} (the default) fits every non-empty submodel of the candidate terms; \code{"stepwise"} runs a stepwise search in the direction set by \code{direction}.
 #' @param ncores Number of cores for parallel computation. Default is 1 (sequential). When ncores > 1, model evaluations are distributed across cores using forking (\code{parallel::mclapply}) on Unix/macOS and a PSOCK cluster (\code{parallel::parLapply}) on Windows, so parallelization is available on all platforms. The backend can be overridden with \code{options(causalreg.parallel = )} ("auto", "fork", "psock", or "sequential").
 #' @param ... Further arguments to be passed to the glm function.
 #' @return A list containing the selected causal submodel and search diagnostics.

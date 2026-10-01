@@ -21,7 +21,7 @@ cglm(
 \arguments{
 \item{formula}{A formula object.}
 
-\item{family}{A distributional family object. Currently supported options are: binomial and poisson.}
+\item{family}{The response family as a character string, \code{"poisson"} or \code{"binomial"}. A family object such as \code{poisson()} is not accepted.}
 
 \item{data}{A data frame containing the variables in the model.}
 
@@ -31,7 +31,7 @@ cglm(
 
 \item{B}{Number of bootstrap samples when pval="bootstrap". Default is 100.}
 
-\item{search}{If search="stepwise", a greedy forward stepwise search is conducted. Default is search="all", in which case all possible submodels are considered.}
+\item{search}{\code{"all"} (the default) fits every non-empty submodel of the candidate terms; \code{"stepwise"} runs a stepwise search in the direction set by \code{direction}.}
 
 \item{ncores}{Number of cores for parallel computation. Default is 1 (sequential). When ncores > 1, model evaluations are distributed across cores using forking (\code{parallel::mclapply}) on Unix/macOS and a PSOCK cluster (\code{parallel::parLapply}) on Windows, so parallelization is available on all platforms. The backend can be overridden with \code{options(causalreg.parallel = )} ("auto", "fork", "psock", or "sequential").}
 
